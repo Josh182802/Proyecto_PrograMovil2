@@ -25,19 +25,47 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.proyecto_alkaravision.local.AlkaravisionDatabase
+import com.example.proyecto_alkaravision.local.UsuarioDao
+import com.example.proyecto_alkaravision.local.UsuarioEntity
+import com.example.proyecto_alkaravision.security.PasswordUtils
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        val baseDatos = AlkaravisionDatabase.obtenerBaseDatos(this)
+        val usuarioDao = baseDatos.usuarioDao()
+
         setContent {
-            PantallaLogin()
+
+            var sesionIniciada by remember {
+                mutableStateOf(false)
+            }
+
+            if (sesionIniciada) {
+                PantallaPrincipal()
+            } else {
+                PantallaLogin(
+                    usuarioDao = usuarioDao,
+                    onLoginExitoso = {
+                        sesionIniciada = true
+                    }
+                )
+            }
         }
     }
 }
 
 @Composable
-fun PantallaLogin() {
+fun PantallaLogin(
+    usuarioDao: UsuarioDao,
+    onLoginExitoso: () -> Unit
+) {
 
     var usuario by remember { mutableStateOf("") }
     var contrasena by remember { mutableStateOf("") }
@@ -46,9 +74,45 @@ fun PantallaLogin() {
 
     var mensaje by remember { mutableStateOf("") }
 
+    val scope = rememberCoroutineScope()
+
+    var inicializado by remember {
+        mutableStateOf(false)
+    }
+
+    var cargando by remember {
+        mutableStateOf(false)
+    }
+
     val azul = Color(0xFF087DEB)
     val celeste = Color(0xFF16C5FF)
     val fondo = Color(0xFF050914)
+
+    LaunchedEffect(Unit) {
+
+        withContext(Dispatchers.IO) {
+
+            if (usuarioDao.contarUsuarios() == 0) {
+
+                val salt = PasswordUtils.generarSalt()
+
+                val hash = PasswordUtils.generarHash(
+                    "Admin123*",
+                    salt
+                )
+
+                usuarioDao.insertarUsuario(
+                    UsuarioEntity(
+                        usuario = "admin",
+                        passwordHash = hash,
+                        salt = salt
+                    )
+                )
+            }
+        }
+
+        inicializado = true
+    }
 
     Box(
         modifier = Modifier
@@ -74,8 +138,6 @@ fun PantallaLogin() {
             verticalArrangement = Arrangement.Center
         ) {
 
-            // Nombre de la empresa
-
             Text(
                 text = "ALKARAVISION",
                 color = Color.White,
@@ -93,8 +155,6 @@ fun PantallaLogin() {
             )
 
             Spacer(modifier = Modifier.height(22.dp))
-
-            // Logo de la empresa
 
             Image(
                 painter = painterResource(
@@ -120,8 +180,6 @@ fun PantallaLogin() {
             )
 
             Spacer(modifier = Modifier.height(30.dp))
-
-            // Campo usuario
 
             OutlinedTextField(
                 value = usuario,
@@ -153,8 +211,6 @@ fun PantallaLogin() {
             )
 
             Spacer(modifier = Modifier.height(16.dp))
-
-            // Campo contraseña
 
             OutlinedTextField(
                 value = contrasena,
@@ -209,8 +265,6 @@ fun PantallaLogin() {
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Recordar usuario y recuperar contraseña
-
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -248,16 +302,57 @@ fun PantallaLogin() {
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Botón iniciar sesión
-
             Button(
                 onClick = {
+
                     if (usuario.isBlank() || contrasena.isBlank()) {
+
                         mensaje = "Completa todos los campos"
+
                     } else {
-                        mensaje = "Conecta aquí la validación del usuario"
+
+                        scope.launch {
+
+                            cargando = true
+                            mensaje = ""
+
+                            val resultado = withContext(Dispatchers.IO) {
+
+                                val usuarioEncontrado =
+                                    usuarioDao.buscarUsuario(usuario.trim())
+
+                                if (usuarioEncontrado == null) {
+
+                                    "Usuario no encontrado"
+
+                                } else {
+
+                                    val contrasenaCorrecta =
+                                        PasswordUtils.verificarContrasena(
+                                            contrasena,
+                                            usuarioEncontrado.passwordHash,
+                                            usuarioEncontrado.salt
+                                        )
+
+                                    if (contrasenaCorrecta) {
+                                        "CORRECTO"
+                                    } else {
+                                        "Contraseña incorrecta"
+                                    }
+                                }
+                            }
+
+                            cargando = false
+
+                            if (resultado == "CORRECTO") {
+                                onLoginExitoso()
+                            } else {
+                                mensaje = resultado
+                            }
+                        }
                     }
                 },
+                enabled = inicializado && !cargando,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(55.dp),
@@ -268,7 +363,7 @@ fun PantallaLogin() {
             ) {
 
                 Text(
-                    text = "INICIAR SESIÓN",
+                    text = if (cargando) "VALIDANDO..." else "INICIAR SESIÓN",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
@@ -283,6 +378,7 @@ fun PantallaLogin() {
             }
 
             if (mensaje.isNotEmpty()) {
+
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Text(
@@ -310,6 +406,47 @@ fun PantallaLogin() {
                 text = "Todos los derechos reservados",
                 color = Color.Gray,
                 fontSize = 10.sp
+            )
+        }
+    }
+}
+
+@Composable
+fun PantallaPrincipal() {
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFF050914)),
+        contentAlignment = Alignment.Center
+    ) {
+
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+
+            Text(
+                text = "ALKARAVISION",
+                color = Color.White,
+                fontSize = 30.sp,
+                fontWeight = FontWeight.ExtraBold
+            )
+
+            Spacer(modifier = Modifier.height(15.dp))
+
+            Text(
+                text = "¡Bienvenido al sistema!",
+                color = Color(0xFF16C5FF),
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Text(
+                text = "Panel principal",
+                color = Color.LightGray,
+                fontSize = 15.sp
             )
         }
     }
