@@ -10,9 +10,10 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 @Database(
     entities = [
         UsuarioEntity::class,
-        ProductoEntity::class
+        ProductoEntity::class,
+        ClienteEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class AlkaravisionDatabase : RoomDatabase() {
@@ -20,6 +21,8 @@ abstract class AlkaravisionDatabase : RoomDatabase() {
     abstract fun usuarioDao(): UsuarioDao
 
     abstract fun productoDao(): ProductoDao
+
+    abstract fun clienteDao(): ClienteDao
 
     companion object {
 
@@ -47,6 +50,25 @@ abstract class AlkaravisionDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+
+            override fun migrate(database: SupportSQLiteDatabase) {
+
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS clientes (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        nombre TEXT NOT NULL,
+                        identidad TEXT NOT NULL,
+                        telefono TEXT NOT NULL,
+                        correo TEXT NOT NULL,
+                        direccion TEXT NOT NULL
+                    )
+                    """.trimIndent()
+                )
+            }
+        }
+
         fun obtenerBaseDatos(context: Context): AlkaravisionDatabase {
 
             return INSTANCE ?: synchronized(this) {
@@ -56,7 +78,10 @@ abstract class AlkaravisionDatabase : RoomDatabase() {
                     AlkaravisionDatabase::class.java,
                     "alkaravision_db"
                 )
-                    .addMigrations(MIGRATION_1_2)
+                    .addMigrations(
+                        MIGRATION_1_2,
+                        MIGRATION_2_3
+                    )
                     .build()
 
                 INSTANCE = instancia

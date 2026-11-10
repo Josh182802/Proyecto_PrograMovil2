@@ -34,6 +34,11 @@ import com.example.proyecto_alkaravision.ui.screens.Add.AddProductoScreen
 import com.example.proyecto_alkaravision.ui.screens.Consultas.ConsultaProductosScreen
 import com.example.proyecto_alkaravision.local.ProductoEntity
 import com.example.proyecto_alkaravision.ui.screens.Editar.EditarProductoScreen
+import com.example.proyecto_alkaravision.local.ClienteDao
+import com.example.proyecto_alkaravision.local.ClienteEntity
+import com.example.proyecto_alkaravision.ui.screens.Add.AddClienteScreen
+import com.example.proyecto_alkaravision.ui.screens.Consultas.ConsultaClientesScreen
+import com.example.proyecto_alkaravision.ui.screens.Editar.EditarClienteScreen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -45,7 +50,8 @@ class MainActivity : ComponentActivity() {
 
         val baseDatos = AlkaravisionDatabase.obtenerBaseDatos(this)
         val usuarioDao = baseDatos.usuarioDao()
-        val productoDao = AlkaravisionDatabase.obtenerBaseDatos(this).productoDao()
+        val productoDao = baseDatos.productoDao()
+        val clienteDao = baseDatos.clienteDao()
 
         setContent {
 
@@ -55,7 +61,8 @@ class MainActivity : ComponentActivity() {
 
             if (sesionIniciada) {
                 PantallaPrincipal(
-                    productoDao,
+                    productoDao = productoDao,
+                    clienteDao = clienteDao,
                     onCerrarSesion = {
                         sesionIniciada = false
                     }
@@ -428,6 +435,7 @@ fun PantallaLogin(
 @Composable
 fun PantallaPrincipal(
     productoDao: ProductoDao,
+    clienteDao: ClienteDao,
     onCerrarSesion: () -> Unit
 ) {
 
@@ -436,6 +444,9 @@ fun PantallaPrincipal(
 
     var opcionInventario by remember { mutableStateOf("") }
     var productoSeleccionado by remember { mutableStateOf<ProductoEntity?>(null) }
+
+    var opcionClientes by remember { mutableStateOf("") }
+    var clienteSeleccionado by remember { mutableStateOf<ClienteEntity?>(null) }
 
     val celeste = Color(0xFF16C5FF)
     val azul = Color(0xFF087DEB)
@@ -547,30 +558,119 @@ fun PantallaPrincipal(
             }
         }
 
+
     } else if (mostrarClientes) {
 
-        AlertDialog(
-            onDismissRequest = {
-                mostrarClientes = false
-            },
-            title = {
-                Text("Clientes")
-            },
-            text = {
-                Text("El módulo de clientes estará disponible próximamente.")
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        mostrarClientes = false
+        when (opcionClientes) {
+
+            "registrar" -> {
+                AddClienteScreen(
+                    clienteDao = clienteDao,
+                    onVolver = {
+                        opcionClientes = ""
                     }
-                ) {
-                    Text("ACEPTAR")
+                )
+            }
+
+            "consultar" -> {
+                ConsultaClientesScreen(
+                    clienteDao = clienteDao,
+                    onVolver = {
+                        opcionClientes = ""
+                    },
+                    onEditar = { cliente ->
+                        clienteSeleccionado = cliente
+                        opcionClientes = "editar"
+                    }
+                )
+            }
+
+            "editar" -> {
+                clienteSeleccionado?.let { cliente ->
+                    EditarClienteScreen(
+                        cliente = cliente,
+                        clienteDao = clienteDao,
+                        onVolver = {
+                            clienteSeleccionado = null
+                            opcionClientes = "consultar"
+                        }
+                    )
                 }
             }
-        )
+
+            else -> {
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color(0xFF050914))
+                        .padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+
+                    Text(
+                        text = "CLIENTES",
+                        color = Color.White,
+                        fontSize = 27.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Spacer(modifier = Modifier.height(30.dp))
+
+                    Button(
+                        onClick = {
+                            opcionClientes = "registrar"
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(60.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = azul
+                        )
+                    ) {
+                        Text("REGISTRAR CLIENTE")
+                    }
+
+                    Spacer(modifier = Modifier.height(18.dp))
+
+                    Button(
+                        onClick = {
+                            opcionClientes = "consultar"
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(60.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = azul
+                        )
+                    ) {
+                        Text("CONSULTAR CLIENTES")
+                    }
+
+                    Spacer(modifier = Modifier.height(30.dp))
+
+                    OutlinedButton(
+                        onClick = {
+                            mostrarClientes = false
+                            opcionClientes = ""
+                        }
+                    ) {
+                        Icon(
+                            Icons.Default.ArrowBack,
+                            contentDescription = null
+                        )
+
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        Text("VOLVER AL MENÚ")
+                    }
+                }
+            }
+        }
 
     } else {
+
 
         Box(
             modifier = Modifier

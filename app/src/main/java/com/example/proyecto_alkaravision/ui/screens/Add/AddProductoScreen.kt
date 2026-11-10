@@ -104,7 +104,7 @@ fun AddProductoScreen(
             Spacer(modifier = Modifier.height(10.dp))
 
             Text(
-                text = "Nuevo producto",
+                text = "Nuevo Producto",
                 color = Color.White,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold
