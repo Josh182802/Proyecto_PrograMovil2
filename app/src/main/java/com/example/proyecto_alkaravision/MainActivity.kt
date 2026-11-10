@@ -29,6 +29,11 @@ import com.example.proyecto_alkaravision.local.AlkaravisionDatabase
 import com.example.proyecto_alkaravision.local.UsuarioDao
 import com.example.proyecto_alkaravision.local.UsuarioEntity
 import com.example.proyecto_alkaravision.security.PasswordUtils
+import com.example.proyecto_alkaravision.local.ProductoDao
+import com.example.proyecto_alkaravision.ui.screens.Add.AddProductoScreen
+import com.example.proyecto_alkaravision.ui.screens.Consultas.ConsultaProductosScreen
+import com.example.proyecto_alkaravision.local.ProductoEntity
+import com.example.proyecto_alkaravision.ui.screens.Editar.EditarProductoScreen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -40,6 +45,7 @@ class MainActivity : ComponentActivity() {
 
         val baseDatos = AlkaravisionDatabase.obtenerBaseDatos(this)
         val usuarioDao = baseDatos.usuarioDao()
+        val productoDao = AlkaravisionDatabase.obtenerBaseDatos(this).productoDao()
 
         setContent {
 
@@ -48,7 +54,12 @@ class MainActivity : ComponentActivity() {
             }
 
             if (sesionIniciada) {
-                PantallaPrincipal()
+                PantallaPrincipal(
+                    productoDao,
+                    onCerrarSesion = {
+                        sesionIniciada = false
+                    }
+                )
             } else {
                 PantallaLogin(
                     usuarioDao = usuarioDao,
@@ -411,43 +422,361 @@ fun PantallaLogin(
     }
 }
 
+
+
+
 @Composable
-fun PantallaPrincipal() {
+fun PantallaPrincipal(
+    productoDao: ProductoDao,
+    onCerrarSesion: () -> Unit
+) {
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFF050914)),
-        contentAlignment = Alignment.Center
-    ) {
+    var mostrarInventario by remember { mutableStateOf(false) }
+    var mostrarClientes by remember { mutableStateOf(false) }
 
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally
+    var opcionInventario by remember { mutableStateOf("") }
+    var productoSeleccionado by remember { mutableStateOf<ProductoEntity?>(null) }
+
+    val celeste = Color(0xFF16C5FF)
+    val azul = Color(0xFF087DEB)
+
+    if (mostrarInventario) {
+
+        when (opcionInventario) {
+
+            "registrar" -> {
+                AddProductoScreen(
+                    productoDao = productoDao,
+                    onVolver = {
+                        opcionInventario = ""
+                    }
+                )
+            }
+
+            "consultar" -> {
+                ConsultaProductosScreen(
+                    productoDao = productoDao,
+                    onVolver = {
+                        opcionInventario = ""
+                    },
+                    onEditar = { producto ->
+                        productoSeleccionado = producto
+                        opcionInventario = "editar"
+                    }
+                )
+            }
+
+            "editar" -> {
+                productoSeleccionado?.let { producto ->
+                    EditarProductoScreen(
+                        producto = producto,
+                        productoDao = productoDao,
+                        onVolver = {
+                            productoSeleccionado = null
+                            opcionInventario = "consultar"
+                        }
+                    )
+                }
+            }
+
+            else -> {
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color(0xFF050914))
+                        .padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+
+                    Text(
+                        text = "INVENTARIO",
+                        color = Color.White,
+                        fontSize = 27.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Spacer(modifier = Modifier.height(30.dp))
+
+                    Button(
+                        onClick = {
+                            opcionInventario = "registrar"
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(60.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = azul
+                        )
+                    ) {
+                        Text("REGISTRAR PRODUCTO")
+                    }
+
+                    Spacer(modifier = Modifier.height(18.dp))
+
+                    Button(
+                        onClick = {
+                            opcionInventario = "consultar"
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(60.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = azul
+                        )
+                    ) {
+                        Text("CONSULTAR PRODUCTOS")
+                    }
+
+                    Spacer(modifier = Modifier.height(30.dp))
+
+                    OutlinedButton(
+                        onClick = {
+                            mostrarInventario = false
+                        }
+                    ) {
+                        Icon(
+                            Icons.Default.ArrowBack,
+                            contentDescription = null
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("VOLVER AL MENÚ")
+                    }
+                }
+            }
+        }
+
+    } else if (mostrarClientes) {
+
+        AlertDialog(
+            onDismissRequest = {
+                mostrarClientes = false
+            },
+            title = {
+                Text("Clientes")
+            },
+            text = {
+                Text("El módulo de clientes estará disponible próximamente.")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        mostrarClientes = false
+                    }
+                ) {
+                    Text("ACEPTAR")
+                }
+            }
+        )
+
+    } else {
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color(0xFF071B3A),
+                            Color(0xFF050914),
+                            Color.Black
+                        )
+                    )
+                )
         ) {
 
-            Text(
-                text = "ALKARAVISION",
-                color = Color.White,
-                fontSize = 30.sp,
-                fontWeight = FontWeight.ExtraBold
-            )
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
 
-            Spacer(modifier = Modifier.height(15.dp))
+                Spacer(modifier = Modifier.height(35.dp))
 
-            Text(
-                text = "¡Bienvenido al sistema!",
-                color = Color(0xFF16C5FF),
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold
-            )
+                Text(
+                    text = "ALKARAVISION",
+                    color = Color.White,
+                    fontSize = 30.sp,
+                    fontWeight = FontWeight.ExtraBold
+                )
 
-            Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
-            Text(
-                text = "Panel principal",
-                color = Color.LightGray,
-                fontSize = 15.sp
-            )
+                Text(
+                    text = "SISTEMA DE TELEVISIÓN POR CABLE E INTERNET",
+                    color = celeste,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(modifier = Modifier.height(35.dp))
+
+                Text(
+                    text = "¡Bienvenido!",
+                    color = Color.White,
+                    fontSize = 26.sp,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Text(
+                    text = "Selecciona el módulo que deseas utilizar",
+                    color = Color.LightGray,
+                    fontSize = 14.sp
+                )
+
+                Spacer(modifier = Modifier.height(35.dp))
+
+                ElevatedCard(
+                    onClick = {
+                        mostrarInventario = true
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(145.dp),
+                    colors = CardDefaults.elevatedCardColors(
+                        containerColor = Color(0xFF10294A)
+                    ),
+                    shape = RoundedCornerShape(20.dp)
+                ) {
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(20.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+
+                        Icon(
+                            imageVector = Icons.Default.Inventory2,
+                            contentDescription = null,
+                            tint = celeste,
+                            modifier = Modifier.size(55.dp)
+                        )
+
+                        Spacer(modifier = Modifier.width(20.dp))
+
+                        Column {
+
+                            Text(
+                                text = "INVENTARIO",
+                                color = Color.White,
+                                fontSize = 19.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Text(
+                                text = "Administración y control de productos",
+                                color = Color.LightGray,
+                                fontSize = 13.sp
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                ElevatedCard(
+                    onClick = {
+                        mostrarClientes = true
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(145.dp),
+                    colors = CardDefaults.elevatedCardColors(
+                        containerColor = Color(0xFF10294A)
+                    ),
+                    shape = RoundedCornerShape(20.dp)
+                ) {
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(20.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+
+                        Icon(
+                            imageVector = Icons.Default.People,
+                            contentDescription = null,
+                            tint = celeste,
+                            modifier = Modifier.size(55.dp)
+                        )
+
+                        Spacer(modifier = Modifier.width(20.dp))
+
+                        Column {
+
+                            Text(
+                                text = "CLIENTES",
+                                color = Color.White,
+                                fontSize = 19.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Text(
+                                text = "Administración de clientes registrados",
+                                color = Color.LightGray,
+                                fontSize = 13.sp
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(35.dp))
+
+                Button(
+                    onClick = onCerrarSesion,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(55.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = azul
+                    )
+                ) {
+
+                    Icon(
+                        imageVector = Icons.Default.Logout,
+                        contentDescription = null
+                    )
+
+                    Spacer(modifier = Modifier.width(10.dp))
+
+                    Text(
+                        text = "CERRAR SESIÓN",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(30.dp))
+
+                HorizontalDivider(
+                    color = Color(0xFF183B65)
+                )
+
+                Spacer(modifier = Modifier.height(15.dp))
+
+                Text(
+                    text = "© 2026 ALKARAVISION",
+                    color = Color.Gray,
+                    fontSize = 11.sp
+                )
+
+                Text(
+                    text = "Todos los derechos reservados",
+                    color = Color.Gray,
+                    fontSize = 10.sp
+                )
+            }
         }
     }
 }
+
