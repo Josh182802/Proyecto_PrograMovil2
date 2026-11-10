@@ -1,3 +1,4 @@
+
 package com.example.proyecto_alkaravision.ui.screens.Editar
 
 import android.widget.Toast
@@ -5,7 +6,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.proyecto_alkaravision.local.ProductoDao
 import com.example.proyecto_alkaravision.local.ProductoEntity
+import com.example.proyecto_alkaravision.ui.components.CamaraSection
 import com.example.proyecto_alkaravision.ui.screens.Add.CampoProducto
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -38,15 +39,42 @@ fun EditarProductoScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    var codigo by remember(producto.id) { mutableStateOf(producto.codigo) }
-    var nombre by remember(producto.id) { mutableStateOf(producto.nombre) }
-    var categoria by remember(producto.id) { mutableStateOf(producto.categoria) }
-    var marca by remember(producto.id) { mutableStateOf(producto.marca) }
-    var precio by remember(producto.id) { mutableStateOf(producto.precio.toString()) }
-    var cantidad by remember(producto.id) { mutableStateOf(producto.cantidad.toString()) }
-    var descripcion by remember(producto.id) { mutableStateOf(producto.descripcion) }
+    var codigo by remember(producto.id) {
+        mutableStateOf(producto.codigo)
+    }
 
-    var cargando by remember { mutableStateOf(false) }
+    var nombre by remember(producto.id) {
+        mutableStateOf(producto.nombre)
+    }
+
+    var categoria by remember(producto.id) {
+        mutableStateOf(producto.categoria)
+    }
+
+    var marca by remember(producto.id) {
+        mutableStateOf(producto.marca)
+    }
+
+    var precio by remember(producto.id) {
+        mutableStateOf(producto.precio.toString())
+    }
+
+    var cantidad by remember(producto.id) {
+        mutableStateOf(producto.cantidad.toString())
+    }
+
+    var descripcion by remember(producto.id) {
+        mutableStateOf(producto.descripcion)
+    }
+
+    // Conserva la fotografía actual del producto
+    var foto by remember(producto.id) {
+        mutableStateOf<String?>(producto.foto)
+    }
+
+    var cargando by remember {
+        mutableStateOf(false)
+    }
 
     val azul = Color(0xFF087DEB)
     val celeste = Color(0xFF16C5FF)
@@ -76,6 +104,7 @@ fun EditarProductoScreen(
             shape = RoundedCornerShape(12.dp),
             modifier = Modifier.align(Alignment.Start)
         ) {
+
             Icon(
                 imageVector = Icons.Default.ArrowBack,
                 contentDescription = "Volver"
@@ -149,6 +178,16 @@ fun EditarProductoScreen(
             multilinea = true
         )
 
+        Spacer(modifier = Modifier.height(15.dp))
+
+        // Cámara para visualizar, cambiar o quitar la fotografía
+        CamaraSection(
+            fotoActual = foto,
+            onFotoCapturada = { nuevaFoto ->
+                foto = nuevaFoto
+            }
+        )
+
         Spacer(modifier = Modifier.height(20.dp))
 
         Button(
@@ -205,7 +244,8 @@ fun EditarProductoScreen(
                                         marca = marca.trim(),
                                         precio = precioConvertido,
                                         cantidad = cantidadConvertida,
-                                        descripcion = descripcion.trim()
+                                        descripcion = descripcion.trim(),
+                                        foto = foto
                                     )
                                 )
                             }

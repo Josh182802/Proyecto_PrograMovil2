@@ -1,3 +1,4 @@
+
 package com.example.proyecto_alkaravision.local
 
 import android.content.Context
@@ -13,7 +14,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         ProductoEntity::class,
         ClienteEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class AlkaravisionDatabase : RoomDatabase() {
@@ -69,6 +70,17 @@ abstract class AlkaravisionDatabase : RoomDatabase() {
             }
         }
 
+        // Migración 3 a 4: agregar fotografía a productos
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+
+            override fun migrate(database: SupportSQLiteDatabase) {
+
+                database.execSQL(
+                    "ALTER TABLE productos ADD COLUMN foto TEXT"
+                )
+            }
+        }
+
         fun obtenerBaseDatos(context: Context): AlkaravisionDatabase {
 
             return INSTANCE ?: synchronized(this) {
@@ -80,7 +92,8 @@ abstract class AlkaravisionDatabase : RoomDatabase() {
                 )
                     .addMigrations(
                         MIGRATION_1_2,
-                        MIGRATION_2_3
+                        MIGRATION_2_3,
+                        MIGRATION_3_4
                     )
                     .build()
 

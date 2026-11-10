@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
 import com.example.proyecto_alkaravision.local.ProductoDao
 import com.example.proyecto_alkaravision.local.ProductoEntity
+import com.example.proyecto_alkaravision.ui.components.ImagenProducto
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -241,6 +242,7 @@ fun ConsultaProductosScreen(
     }
 }
 
+
 @Composable
 fun TarjetaProducto(
     producto: ProductoEntity,
@@ -260,6 +262,15 @@ fun TarjetaProducto(
             modifier = Modifier.padding(18.dp)
         ) {
 
+            // Fotografía del producto
+            ImagenProducto(
+                rutaFoto = producto.foto,
+                modifier = Modifier.fillMaxWidth(),
+                altura = 180
+            )
+
+            Spacer(modifier = Modifier.height(14.dp))
+
             Text(
                 text = producto.nombre,
                 color = Color.White,
@@ -272,7 +283,10 @@ fun TarjetaProducto(
             DatoProducto("Código", producto.codigo)
             DatoProducto("Categoría", producto.categoria)
             DatoProducto("Marca", producto.marca)
-            DatoProducto("Precio", "L. ${"%.2f".format(producto.precio)}")
+            DatoProducto(
+                "Precio",
+                "L. ${"%.2f".format(producto.precio)}"
+            )
             DatoProducto("Cantidad", producto.cantidad.toString())
             DatoProducto("Descripción", producto.descripcion)
 
@@ -283,7 +297,8 @@ fun TarjetaProducto(
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color(0xFF087DEB)
-                )
+                ),
+                shape = RoundedCornerShape(12.dp)
             ) {
 
                 Icon(
@@ -303,7 +318,8 @@ fun TarjetaProducto(
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color(0xFFD32F2F)
-                )
+                ),
+                shape = RoundedCornerShape(12.dp)
             ) {
 
                 Icon(
@@ -318,6 +334,7 @@ fun TarjetaProducto(
         }
     }
 }
+
 
 @Composable
 fun DatoProducto(

@@ -1,3 +1,4 @@
+
 package com.example.proyecto_alkaravision.ui.screens.Add
 
 import android.widget.Toast
@@ -23,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.proyecto_alkaravision.local.ProductoDao
 import com.example.proyecto_alkaravision.local.ProductoEntity
+import com.example.proyecto_alkaravision.ui.components.CamaraSection
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -43,6 +45,7 @@ fun AddProductoScreen(
     var precio by remember { mutableStateOf("") }
     var cantidad by remember { mutableStateOf("") }
     var descripcion by remember { mutableStateOf("") }
+    var foto by remember { mutableStateOf<String?>(null) }
 
     var cargando by remember { mutableStateOf(false) }
 
@@ -62,7 +65,6 @@ fun AddProductoScreen(
                 )
             )
     ) {
-
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -75,7 +77,6 @@ fun AddProductoScreen(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-
                 IconButton(onClick = onVolver) {
                     Icon(
                         imageVector = Icons.Default.ArrowBack,
@@ -163,6 +164,16 @@ fun AddProductoScreen(
                 multilinea = true
             )
 
+            Spacer(modifier = Modifier.height(15.dp))
+
+            // COMPONENTE DE CÁMARA
+            CamaraSection(
+                fotoActual = foto,
+                onFotoCapturada = { nuevaFoto ->
+                    foto = nuevaFoto
+                }
+            )
+
             Spacer(modifier = Modifier.height(20.dp))
 
             Button(
@@ -205,11 +216,9 @@ fun AddProductoScreen(
                         cargando = true
 
                         scope.launch {
-
                             try {
 
                                 withContext(Dispatchers.IO) {
-
                                     productoDao.insertarProducto(
                                         ProductoEntity(
                                             codigo = codigo.trim(),
@@ -218,7 +227,8 @@ fun AddProductoScreen(
                                             marca = marca.trim(),
                                             precio = precioConvertido,
                                             cantidad = cantidadConvertida,
-                                            descripcion = descripcion.trim()
+                                            descripcion = descripcion.trim(),
+                                            foto = foto
                                         )
                                     )
                                 }
@@ -236,6 +246,7 @@ fun AddProductoScreen(
                                 precio = ""
                                 cantidad = ""
                                 descripcion = ""
+                                foto = null
 
                             } catch (e: Exception) {
 
@@ -246,7 +257,6 @@ fun AddProductoScreen(
                                 ).show()
 
                             } finally {
-
                                 cargando = false
                             }
                         }
