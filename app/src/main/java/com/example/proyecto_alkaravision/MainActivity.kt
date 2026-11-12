@@ -25,6 +25,8 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.content.Context
+import androidx.compose.ui.platform.LocalContext
 import com.example.proyecto_alkaravision.local.AlkaravisionDatabase
 import com.example.proyecto_alkaravision.local.UsuarioDao
 import com.example.proyecto_alkaravision.local.UsuarioEntity
@@ -106,7 +108,17 @@ fun PantallaLogin(
     val celeste = Color(0xFF16C5FF)
     val fondo = Color(0xFF050914)
 
+    val context = LocalContext.current
+
+    val preferencias = remember { context.getSharedPreferences( "alkaravision_preferencias",
+            Context.MODE_PRIVATE) }
+
     LaunchedEffect(Unit) {
+        recordar = preferencias.getBoolean("recordar_usuario", false)
+
+        if (recordar) {
+            usuario = preferencias.getString("usuario_recordado", "") ?: ""
+        }
 
         withContext(Dispatchers.IO) {
 
@@ -363,6 +375,21 @@ fun PantallaLogin(
                             cargando = false
 
                             if (resultado == "CORRECTO") {
+                                if (recordar) {
+
+                                    preferencias.edit()
+                                        .putBoolean("recordar_usuario", true)
+                                        .putString("usuario_recordado", usuario.trim())
+                                        .apply()
+
+                                } else {
+
+                                    preferencias.edit()
+                                        .remove("usuario_recordado")
+                                        .putBoolean("recordar_usuario", false)
+                                        .apply()
+                                }
+
                                 onLoginExitoso()
                             } else {
                                 mensaje = resultado
