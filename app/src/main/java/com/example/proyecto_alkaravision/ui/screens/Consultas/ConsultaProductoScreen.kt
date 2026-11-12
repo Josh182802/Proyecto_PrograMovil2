@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -37,12 +38,9 @@ fun ConsultaProductosScreen(
     onEditar: (ProductoEntity) -> Unit
 ) {
 
-    // Texto escrito en el buscador
-    var busqueda by remember { mutableStateOf("") }
+    var busqueda by rememberSaveable { mutableStateOf("") }
 
-    // Productos filtrados desde Room
-    val productos by productoDao.buscarProductosPorTexto(busqueda)
-        .collectAsState(initial = emptyList())
+    val productos by productoDao.buscarProductosPorTexto(busqueda).collectAsState(initial = emptyList())
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()

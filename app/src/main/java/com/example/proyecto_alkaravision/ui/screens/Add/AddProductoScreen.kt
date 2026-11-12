@@ -20,6 +20,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.proyecto_alkaravision.local.ProductoDao
@@ -38,14 +39,14 @@ fun AddProductoScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    var codigo by remember { mutableStateOf("") }
-    var nombre by remember { mutableStateOf("") }
-    var categoria by remember { mutableStateOf("") }
-    var marca by remember { mutableStateOf("") }
-    var precio by remember { mutableStateOf("") }
-    var cantidad by remember { mutableStateOf("") }
-    var descripcion by remember { mutableStateOf("") }
-    var foto by remember { mutableStateOf<String?>(null) }
+    var codigo by rememberSaveable { mutableStateOf("") }
+    var nombre by rememberSaveable { mutableStateOf("") }
+    var categoria by rememberSaveable { mutableStateOf("") }
+    var marca by rememberSaveable { mutableStateOf("") }
+    var precio by rememberSaveable { mutableStateOf("") }
+    var cantidad by rememberSaveable { mutableStateOf("") }
+    var descripcion by rememberSaveable { mutableStateOf("") }
+    var foto by rememberSaveable { mutableStateOf<String?>(null) }
 
     var cargando by remember { mutableStateOf(false) }
 

@@ -469,6 +469,7 @@ fun PantallaPrincipal(
     var mostrarClientes by rememberSaveable { mutableStateOf(false) }
 
     var opcionInventario by rememberSaveable { mutableStateOf("") }
+    var productoSeleccionadoId by rememberSaveable { mutableIntStateOf(-1) }
     var productoSeleccionado by remember { mutableStateOf<ProductoEntity?>(null) }
 
     var opcionClientes by rememberSaveable { mutableStateOf("") }
@@ -482,6 +483,16 @@ fun PantallaPrincipal(
         clienteSeleccionado = if (clienteSeleccionadoId != -1) {
             withContext(Dispatchers.IO) {
                 clienteDao.obtenerClientePorId(clienteSeleccionadoId)
+            }
+        } else {
+            null
+        }
+    }
+
+    LaunchedEffect(productoSeleccionadoId) {
+        productoSeleccionado = if (productoSeleccionadoId != -1) {
+            withContext(Dispatchers.IO) {
+                productoDao.obtenerProductoPorId(productoSeleccionadoId)
             }
         } else {
             null
@@ -508,6 +519,7 @@ fun PantallaPrincipal(
                         opcionInventario = ""
                     },
                     onEditar = { producto ->
+                        productoSeleccionadoId = producto.id
                         productoSeleccionado = producto
                         opcionInventario = "editar"
                     }
@@ -515,15 +527,38 @@ fun PantallaPrincipal(
             }
 
             "editar" -> {
-                productoSeleccionado?.let { producto ->
+                if (productoSeleccionado != null) {
                     EditarProductoScreen(
-                        producto = producto,
+                        producto = productoSeleccionado!!,
                         productoDao = productoDao,
                         onVolver = {
+                            productoSeleccionadoId = -1
                             productoSeleccionado = null
                             opcionInventario = "consultar"
                         }
                     )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color(0xFF050914)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            CircularProgressIndicator(
+                                color = Color(0xFF16C5FF)
+                            )
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            Text(
+                                text = "Recuperando información del producto...",
+                                color = Color.White
+                            )
+                        }
+                    }
                 }
             }
 

@@ -12,6 +12,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -39,36 +40,35 @@ fun EditarProductoScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    var codigo by remember(producto.id) {
+    var codigo by rememberSaveable (producto.id) {
         mutableStateOf(producto.codigo)
     }
 
-    var nombre by remember(producto.id) {
+    var nombre by rememberSaveable (producto.id) {
         mutableStateOf(producto.nombre)
     }
 
-    var categoria by remember(producto.id) {
+    var categoria by rememberSaveable (producto.id) {
         mutableStateOf(producto.categoria)
     }
 
-    var marca by remember(producto.id) {
+    var marca by rememberSaveable (producto.id) {
         mutableStateOf(producto.marca)
     }
 
-    var precio by remember(producto.id) {
+    var precio by rememberSaveable (producto.id) {
         mutableStateOf(producto.precio.toString())
     }
 
-    var cantidad by remember(producto.id) {
+    var cantidad by rememberSaveable (producto.id) {
         mutableStateOf(producto.cantidad.toString())
     }
 
-    var descripcion by remember(producto.id) {
+    var descripcion by rememberSaveable (producto.id) {
         mutableStateOf(producto.descripcion)
     }
 
-    // Conserva la fotografía actual del producto
-    var foto by remember(producto.id) {
+    var foto by rememberSaveable(producto.id) {
         mutableStateOf<String?>(producto.foto)
     }
 
