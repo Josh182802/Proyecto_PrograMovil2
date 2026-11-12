@@ -219,35 +219,60 @@ fun AddProductoScreen(
                         scope.launch {
                             try {
 
-                                withContext(Dispatchers.IO) {
-                                    productoDao.insertarProducto(
-                                        ProductoEntity(
-                                            codigo = codigo.trim(),
-                                            nombre = nombre.trim(),
-                                            categoria = categoria.trim(),
-                                            marca = marca.trim(),
-                                            precio = precioConvertido,
-                                            cantidad = cantidadConvertida,
-                                            descripcion = descripcion.trim(),
-                                            foto = foto
+                                val registrado = withContext(Dispatchers.IO) {
+
+                                    val productoExistente =
+                                        productoDao.buscarProducto(codigo.trim())
+
+                                    if (productoExistente != null) {
+
+                                        false
+
+                                    } else {
+
+                                        productoDao.insertarProducto(
+                                            ProductoEntity(
+                                                codigo = codigo.trim(),
+                                                nombre = nombre.trim(),
+                                                categoria = categoria.trim(),
+                                                marca = marca.trim(),
+                                                precio = precioConvertido,
+                                                cantidad = cantidadConvertida,
+                                                descripcion = descripcion.trim(),
+                                                foto = foto
+                                            )
                                         )
-                                    )
+
+                                        true
+                                    }
                                 }
 
-                                Toast.makeText(
-                                    context,
-                                    "Producto registrado correctamente",
-                                    Toast.LENGTH_SHORT
-                                ).show()
+                                if (registrado) {
 
-                                codigo = ""
-                                nombre = ""
-                                categoria = ""
-                                marca = ""
-                                precio = ""
-                                cantidad = ""
-                                descripcion = ""
-                                foto = null
+                                    Toast.makeText(
+                                        context,
+                                        "Producto registrado correctamente",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+
+                                    codigo = ""
+                                    nombre = ""
+                                    categoria = ""
+                                    marca = ""
+                                    precio = ""
+                                    cantidad = ""
+                                    descripcion = ""
+                                    foto = null
+
+                                } else {
+
+                                    Toast.makeText(
+                                        context,
+                                        "Ya existe un producto registrado con ese código",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+
+                                }
 
                             } catch (e: Exception) {
 

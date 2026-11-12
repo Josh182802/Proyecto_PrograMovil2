@@ -1,4 +1,3 @@
-
 package com.example.proyecto_alkaravision.ui.screens.Editar
 
 import android.widget.Toast
@@ -182,7 +181,6 @@ fun EditarProductoScreen(
 
         Spacer(modifier = Modifier.height(15.dp))
 
-        // Cámara para visualizar, cambiar o quitar la fotografía
         CamaraSection(
             fotoActual = foto,
             onFotoCapturada = { nuevaFoto ->
@@ -231,48 +229,67 @@ fun EditarProductoScreen(
 
                     cargando = true
 
-                    scope.launch {
 
+                    scope.launch {
                         try {
 
-                            withContext(Dispatchers.IO) {
+                            val codigoLimpio = codigo.trim()
 
-                                productoDao.actualizarProducto(
-                                    ProductoEntity(
-                                        id = producto.id,
-                                        codigo = codigo.trim(),
-                                        nombre = nombre.trim(),
-                                        categoria = categoria.trim(),
-                                        marca = marca.trim(),
-                                        precio = precioConvertido,
-                                        cantidad = cantidadConvertida,
-                                        descripcion = descripcion.trim(),
-                                        foto = foto
-                                    )
-                                )
+                            val productoExistente = withContext(Dispatchers.IO) {
+                                productoDao.buscarProducto(codigoLimpio)
                             }
 
-                            Toast.makeText(
-                                context,
-                                "Producto actualizado correctamente",
-                                Toast.LENGTH_SHORT
-                            ).show()
+                            if (
+                                productoExistente != null &&
+                                productoExistente.id != producto.id
+                            ) {
 
-                            onVolver()
+                                Toast.makeText(
+                                    context,
+                                    "Ese código ya pertenece a otro producto",
+                                    Toast.LENGTH_LONG
+                                ).show()
+
+                            } else {
+
+                                withContext(Dispatchers.IO) {
+                                    productoDao.actualizarProducto(
+                                        ProductoEntity(
+                                            id = producto.id,
+                                            codigo = codigoLimpio,
+                                            nombre = nombre.trim(),
+                                            categoria = categoria.trim(),
+                                            marca = marca.trim(),
+                                            precio = precioConvertido,
+                                            cantidad = cantidadConvertida,
+                                            descripcion = descripcion.trim(),
+                                            foto = foto
+                                        )
+                                    )
+                                }
+
+                                Toast.makeText(
+                                    context,
+                                    "Producto actualizado correctamente",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+
+                                onVolver()
+                            }
 
                         } catch (e: Exception) {
 
                             Toast.makeText(
                                 context,
-                                "Error al actualizar: ${e.message}",
+                                "Error al actualizar el producto",
                                 Toast.LENGTH_LONG
                             ).show()
 
                         } finally {
-
                             cargando = false
                         }
                     }
+
                 }
             },
             modifier = Modifier

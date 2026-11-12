@@ -16,7 +16,7 @@ interface ProductoDao {
     @Query("SELECT * FROM productos ORDER BY nombre ASC")
     fun obtenerProductos(): Flow<List<ProductoEntity>>
 
-    @Query("SELECT * FROM productos WHERE codigo = :codigo LIMIT 1")
+    @Query("SELECT * FROM productos WHERE codigo = :codigo COLLATE NOCASE LIMIT 1")
     suspend fun buscarProducto(codigo: String): ProductoEntity?
 
     @Query("SELECT * FROM productos WHERE id = :id LIMIT 1")
