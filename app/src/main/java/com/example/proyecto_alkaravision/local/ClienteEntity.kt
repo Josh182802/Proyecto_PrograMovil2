@@ -1,3 +1,4 @@
+
 package com.example.proyecto_alkaravision.local
 
 import androidx.room.Entity
@@ -17,5 +18,11 @@ data class ClienteEntity(
 
     val correo: String,
 
-    val direccion: String
+    val departamento: String,
+
+    val municipio: String,
+
+    val localidad: String,
+
+    val direccionExacta: String
 )

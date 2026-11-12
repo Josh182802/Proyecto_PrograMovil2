@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import android.content.Context
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.saveable.rememberSaveable
 import com.example.proyecto_alkaravision.local.AlkaravisionDatabase
 import com.example.proyecto_alkaravision.local.UsuarioDao
 import com.example.proyecto_alkaravision.local.UsuarioEntity
@@ -57,7 +58,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
 
-            var sesionIniciada by remember {
+            var sesionIniciada by rememberSaveable {
                 mutableStateOf(false)
             }
 
@@ -81,15 +82,16 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+
 @Composable
 fun PantallaLogin(
     usuarioDao: UsuarioDao,
     onLoginExitoso: () -> Unit
 ) {
 
-    var usuario by remember { mutableStateOf("") }
+    var usuario by rememberSaveable { mutableStateOf("") }
     var contrasena by remember { mutableStateOf("") }
-    var recordar by remember { mutableStateOf(false) }
+    var recordar by rememberSaveable { mutableStateOf(false) }
     var mostrarContrasena by remember { mutableStateOf(false) }
 
     var mensaje by remember { mutableStateOf("") }
@@ -456,9 +458,6 @@ fun PantallaLogin(
     }
 }
 
-
-
-
 @Composable
 fun PantallaPrincipal(
     productoDao: ProductoDao,
@@ -466,17 +465,28 @@ fun PantallaPrincipal(
     onCerrarSesion: () -> Unit
 ) {
 
-    var mostrarInventario by remember { mutableStateOf(false) }
-    var mostrarClientes by remember { mutableStateOf(false) }
+    var mostrarInventario by rememberSaveable { mutableStateOf(false) }
+    var mostrarClientes by rememberSaveable { mutableStateOf(false) }
 
-    var opcionInventario by remember { mutableStateOf("") }
+    var opcionInventario by rememberSaveable { mutableStateOf("") }
     var productoSeleccionado by remember { mutableStateOf<ProductoEntity?>(null) }
 
-    var opcionClientes by remember { mutableStateOf("") }
+    var opcionClientes by rememberSaveable { mutableStateOf("") }
+    var clienteSeleccionadoId by rememberSaveable { mutableIntStateOf(-1) }
     var clienteSeleccionado by remember { mutableStateOf<ClienteEntity?>(null) }
 
     val celeste = Color(0xFF16C5FF)
     val azul = Color(0xFF087DEB)
+
+    LaunchedEffect(clienteSeleccionadoId) {
+        clienteSeleccionado = if (clienteSeleccionadoId != -1) {
+            withContext(Dispatchers.IO) {
+                clienteDao.obtenerClientePorId(clienteSeleccionadoId)
+            }
+        } else {
+            null
+        }
+    }
 
     if (mostrarInventario) {
 
@@ -606,6 +616,7 @@ fun PantallaPrincipal(
                         opcionClientes = ""
                     },
                     onEditar = { cliente ->
+                        clienteSeleccionadoId = cliente.id
                         clienteSeleccionado = cliente
                         opcionClientes = "editar"
                     }
@@ -613,15 +624,44 @@ fun PantallaPrincipal(
             }
 
             "editar" -> {
-                clienteSeleccionado?.let { cliente ->
+
+                if (clienteSeleccionado != null) {
+
                     EditarClienteScreen(
-                        cliente = cliente,
+                        cliente = clienteSeleccionado!!,
                         clienteDao = clienteDao,
                         onVolver = {
+                            clienteSeleccionadoId = -1
                             clienteSeleccionado = null
                             opcionClientes = "consultar"
                         }
                     )
+
+                } else {
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color(0xFF050914)),
+                        contentAlignment = Alignment.Center
+                    ) {
+
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+
+                            CircularProgressIndicator(
+                                color = Color(0xFF16C5FF)
+                            )
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            Text(
+                                text = "Recuperando información del cliente...",
+                                color = Color.White
+                            )
+                        }
+                    }
                 }
             }
 

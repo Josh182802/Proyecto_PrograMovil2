@@ -96,23 +96,25 @@ fun EditarProductoScreen(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
 
-        Button(
-            onClick = onVolver,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = azul
-            ),
-            shape = RoundedCornerShape(12.dp),
-            modifier = Modifier.align(Alignment.Start)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
         ) {
 
-            Icon(
-                imageVector = Icons.Default.ArrowBack,
-                contentDescription = "Volver"
+            IconButton(onClick = onVolver) {
+                Icon(
+                    imageVector = Icons.Default.ArrowBack,
+                    contentDescription = "Volver",
+                    tint = Color.White
+                )
+            }
+
+            Text(
+                text = "VOLVER",
+                color = Color.White,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold
             )
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            Text("VOLVER A PRODUCTOS")
         }
 
         Spacer(modifier = Modifier.height(20.dp))

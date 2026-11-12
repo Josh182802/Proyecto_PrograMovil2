@@ -14,7 +14,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         ProductoEntity::class,
         ClienteEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class AlkaravisionDatabase : RoomDatabase() {
@@ -70,7 +70,6 @@ abstract class AlkaravisionDatabase : RoomDatabase() {
             }
         }
 
-        // Migración 3 a 4: agregar fotografía a productos
         private val MIGRATION_3_4 = object : Migration(3, 4) {
 
             override fun migrate(database: SupportSQLiteDatabase) {
@@ -80,6 +79,63 @@ abstract class AlkaravisionDatabase : RoomDatabase() {
                 )
             }
         }
+
+
+        private val MIGRATION_4_5 = object : Migration(4, 5) {
+
+            override fun migrate(database: SupportSQLiteDatabase) {
+
+                database.execSQL(
+                    """
+            CREATE TABLE clientes_nueva (
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                nombre TEXT NOT NULL,
+                identidad TEXT NOT NULL,
+                telefono TEXT NOT NULL,
+                correo TEXT NOT NULL,
+                departamento TEXT NOT NULL,
+                municipio TEXT NOT NULL,
+                localidad TEXT NOT NULL,
+                direccionExacta TEXT NOT NULL
+            )
+            """.trimIndent()
+                )
+
+                database.execSQL(
+                    """
+            INSERT INTO clientes_nueva (
+                id,
+                nombre,
+                identidad,
+                telefono,
+                correo,
+                departamento,
+                municipio,
+                localidad,
+                direccionExacta
+            )
+            SELECT
+                id,
+                nombre,
+                identidad,
+                telefono,
+                correo,
+                '',
+                '',
+                '',
+                direccion
+            FROM clientes
+            """.trimIndent()
+                )
+
+                database.execSQL("DROP TABLE clientes")
+
+                database.execSQL(
+                    "ALTER TABLE clientes_nueva RENAME TO clientes"
+                )
+            }
+        }
+
 
         fun obtenerBaseDatos(context: Context): AlkaravisionDatabase {
 
@@ -93,7 +149,8 @@ abstract class AlkaravisionDatabase : RoomDatabase() {
                     .addMigrations(
                         MIGRATION_1_2,
                         MIGRATION_2_3,
-                        MIGRATION_3_4
+                        MIGRATION_3_4,
+                        MIGRATION_4_5
                     )
                     .build()
 

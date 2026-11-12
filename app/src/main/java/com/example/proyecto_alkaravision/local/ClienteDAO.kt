@@ -20,13 +20,19 @@ interface ClienteDao {
     @Query("SELECT * FROM clientes WHERE identidad = :identidad LIMIT 1")
     suspend fun buscarCliente(identidad: String): ClienteEntity?
 
+    @Query("SELECT * FROM clientes WHERE id = :id LIMIT 1")
+    suspend fun obtenerClientePorId(id: Int): ClienteEntity?
+
     @Query("""
         SELECT * FROM clientes
         WHERE nombre LIKE '%' || :busqueda || '%'
         OR identidad LIKE '%' || :busqueda || '%'
         OR telefono LIKE '%' || :busqueda || '%'
         OR correo LIKE '%' || :busqueda || '%'
-        OR direccion LIKE '%' || :busqueda || '%'
+        OR departamento LIKE '%' || :busqueda || '%'
+        OR municipio LIKE '%' || :busqueda || '%'
+        OR localidad LIKE '%' || :busqueda || '%'
+        OR direccionExacta LIKE '%' || :busqueda || '%'
         ORDER BY nombre ASC
     """)
     fun buscarClientesPorTexto(

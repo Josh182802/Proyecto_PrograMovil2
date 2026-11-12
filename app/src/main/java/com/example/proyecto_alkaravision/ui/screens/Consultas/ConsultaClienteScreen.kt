@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -37,10 +38,8 @@ fun ConsultaClientesScreen(
     onEditar: (ClienteEntity) -> Unit
 ) {
 
-    // Texto escrito en el buscador
-    var busqueda by remember { mutableStateOf("") }
+    var busqueda by rememberSaveable { mutableStateOf("") }
 
-    // Clientes filtrados desde Room
     val clientes by clienteDao.buscarClientesPorTexto(busqueda)
         .collectAsState(initial = emptyList())
 
@@ -114,7 +113,7 @@ fun ConsultaClientesScreen(
             modifier = Modifier.fillMaxWidth(),
             placeholder = {
                 Text(
-                    text = "Buscar por nombre, identidad, teléfono...",
+                    text = "Buscar por nombre, identidad, municipio, departamento...",
                     color = Color.LightGray
                 )
             },
@@ -198,7 +197,7 @@ fun ConsultaClientesScreen(
                         Spacer(modifier = Modifier.height(6.dp))
 
                         Text(
-                            text = "Intenta con otro nombre, identidad o teléfono",
+                            text = "Intenta con otro nombre, identidad, municipio o departamento",
                             color = Color.LightGray,
                             fontSize = 13.sp
                         )
@@ -343,7 +342,10 @@ fun TarjetaCliente(
             DatoCliente("Identidad", cliente.identidad)
             DatoCliente("Teléfono", cliente.telefono)
             DatoCliente("Correo electrónico", cliente.correo)
-            DatoCliente("Dirección", cliente.direccion)
+            DatoCliente("Departamento", cliente.departamento)
+            DatoCliente("Municipio", cliente.municipio)
+            DatoCliente("Colonia, barrio o aldea", cliente.localidad)
+            DatoCliente("Dirección exacta", cliente.direccionExacta)
 
             Spacer(modifier = Modifier.height(12.dp))
 
