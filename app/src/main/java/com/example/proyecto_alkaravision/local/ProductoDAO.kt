@@ -19,6 +19,18 @@ interface ProductoDao {
     @Query("SELECT * FROM productos WHERE codigo = :codigo LIMIT 1")
     suspend fun buscarProducto(codigo: String): ProductoEntity?
 
+    @Query("""
+        SELECT * FROM productos
+        WHERE codigo LIKE '%' || :busqueda || '%'
+        OR nombre LIKE '%' || :busqueda || '%'
+        OR marca LIKE '%' || :busqueda || '%'
+        OR categoria LIKE '%' || :busqueda || '%'
+        ORDER BY nombre ASC
+    """)
+    fun buscarProductosPorTexto(
+        busqueda: String
+    ): Flow<List<ProductoEntity>>
+
     @Update
     suspend fun actualizarProducto(producto: ProductoEntity)
 

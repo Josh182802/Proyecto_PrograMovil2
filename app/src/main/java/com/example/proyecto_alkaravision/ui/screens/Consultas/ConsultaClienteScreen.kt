@@ -12,6 +12,8 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -35,11 +37,15 @@ fun ConsultaClientesScreen(
     onEditar: (ClienteEntity) -> Unit
 ) {
 
+    // Texto escrito en el buscador
+    var busqueda by remember { mutableStateOf("") }
+
+    // Clientes filtrados desde Room
+    val clientes by clienteDao.buscarClientesPorTexto(busqueda)
+        .collectAsState(initial = emptyList())
+
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-
-    val clientes by clienteDao.obtenerClientes()
-        .collectAsState(initial = emptyList())
 
     var clienteEliminar by remember {
         mutableStateOf<ClienteEntity?>(null)
@@ -73,6 +79,7 @@ fun ConsultaClientesScreen(
             ),
             shape = RoundedCornerShape(12.dp)
         ) {
+
             Icon(
                 imageVector = Icons.Default.ArrowBack,
                 contentDescription = "Volver"
@@ -100,8 +107,54 @@ fun ConsultaClientesScreen(
 
         Spacer(modifier = Modifier.height(20.dp))
 
+        // BUSCADOR DE CLIENTES
+        OutlinedTextField(
+            value = busqueda,
+            onValueChange = { busqueda = it },
+            modifier = Modifier.fillMaxWidth(),
+            placeholder = {
+                Text(
+                    text = "Buscar por nombre, identidad, teléfono...",
+                    color = Color.LightGray
+                )
+            },
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = "Buscar",
+                    tint = celeste
+                )
+            },
+            trailingIcon = {
+                if (busqueda.isNotEmpty()) {
+                    IconButton(
+                        onClick = { busqueda = "" }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Limpiar búsqueda",
+                            tint = celeste
+                        )
+                    }
+                }
+            },
+            singleLine = true,
+            shape = RoundedCornerShape(14.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = celeste,
+                unfocusedBorderColor = celeste.copy(alpha = 0.5f),
+                focusedTextColor = Color.White,
+                unfocusedTextColor = Color.White,
+                cursorColor = celeste,
+                focusedLeadingIconColor = celeste,
+                unfocusedLeadingIconColor = celeste
+            )
+        )
+
+        Spacer(modifier = Modifier.height(15.dp))
+
         Text(
-            text = "Total de clientes: ${clientes.size}",
+            text = "Clientes encontrados: ${clientes.size}",
             color = Color.White,
             fontWeight = FontWeight.Bold,
             fontSize = 16.sp
@@ -112,7 +165,9 @@ fun ConsultaClientesScreen(
         if (clientes.isEmpty()) {
 
             Box(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
                 contentAlignment = Alignment.Center
             ) {
 
@@ -130,16 +185,31 @@ fun ConsultaClientesScreen(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     Text(
-                        text = "No hay clientes registrados",
+                        text = if (busqueda.isNotBlank()) {
+                            "No se encontraron clientes"
+                        } else {
+                            "No hay clientes registrados"
+                        },
                         color = Color.White,
                         fontSize = 16.sp
                     )
+
+                    if (busqueda.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        Text(
+                            text = "Intenta con otro nombre, identidad o teléfono",
+                            color = Color.LightGray,
+                            fontSize = 13.sp
+                        )
+                    }
                 }
             }
 
         } else {
 
             LazyColumn(
+                modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
 
@@ -158,6 +228,7 @@ fun ConsultaClientesScreen(
         }
     }
 
+    // VENTANA DE CONFIRMACIÓN PARA ELIMINAR
     clienteEliminar?.let { cliente ->
 
         AlertDialog(

@@ -11,6 +11,8 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -35,7 +37,11 @@ fun ConsultaProductosScreen(
     onEditar: (ProductoEntity) -> Unit
 ) {
 
-    val productos by productoDao.obtenerProductos()
+    // Texto escrito en el buscador
+    var busqueda by remember { mutableStateOf("") }
+
+    // Productos filtrados desde Room
+    val productos by productoDao.buscarProductosPorTexto(busqueda)
         .collectAsState(initial = emptyList())
 
     val context = LocalContext.current
@@ -50,6 +56,7 @@ fun ConsultaProductosScreen(
     }
 
     val celeste = Color(0xFF16C5FF)
+    val azulMarino = Color(0xFF071B3A)
 
     Column(
         modifier = Modifier
@@ -101,8 +108,54 @@ fun ConsultaProductosScreen(
 
         Spacer(modifier = Modifier.height(20.dp))
 
+        // BUSCADOR DE PRODUCTOS
+        OutlinedTextField(
+            value = busqueda,
+            onValueChange = { busqueda = it },
+            modifier = Modifier.fillMaxWidth(),
+            placeholder = {
+                Text(
+                    text = "Buscar por código, nombre, marca o categoría",
+                    color = Color.LightGray
+                )
+            },
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = "Buscar",
+                    tint = celeste
+                )
+            },
+            trailingIcon = {
+                if (busqueda.isNotEmpty()) {
+                    IconButton(
+                        onClick = { busqueda = "" }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Limpiar búsqueda",
+                            tint = celeste
+                        )
+                    }
+                }
+            },
+            singleLine = true,
+            shape = RoundedCornerShape(14.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = celeste,
+                unfocusedBorderColor = celeste.copy(alpha = 0.5f),
+                focusedTextColor = Color.White,
+                unfocusedTextColor = Color.White,
+                cursorColor = celeste,
+                focusedLeadingIconColor = celeste,
+                unfocusedLeadingIconColor = celeste
+            )
+        )
+
+        Spacer(modifier = Modifier.height(15.dp))
+
         Text(
-            text = "Total de productos: ${productos.size}",
+            text = "Productos encontrados: ${productos.size}",
             color = Color.White,
             fontWeight = FontWeight.Bold,
             fontSize = 16.sp
@@ -113,7 +166,9 @@ fun ConsultaProductosScreen(
         if (productos.isEmpty()) {
 
             Box(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
                 contentAlignment = Alignment.Center
             ) {
 
@@ -131,16 +186,31 @@ fun ConsultaProductosScreen(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     Text(
-                        text = "No hay productos registrados",
+                        text = if (busqueda.isNotBlank()) {
+                            "No se encontraron productos"
+                        } else {
+                            "No hay productos registrados"
+                        },
                         color = Color.White,
                         fontSize = 16.sp
                     )
+
+                    if (busqueda.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        Text(
+                            text = "Intenta con otro nombre, código o marca",
+                            color = Color.LightGray,
+                            fontSize = 13.sp
+                        )
+                    }
                 }
             }
 
         } else {
 
             LazyColumn(
+                modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
 
@@ -163,8 +233,7 @@ fun ConsultaProductosScreen(
         }
     }
 
-    // Ventana de confirmación para eliminar
-
+    // VENTANA DE CONFIRMACIÓN PARA ELIMINAR
     productoEliminar?.let { producto ->
 
         AlertDialog(
@@ -242,7 +311,6 @@ fun ConsultaProductosScreen(
     }
 }
 
-
 @Composable
 fun TarjetaProducto(
     producto: ProductoEntity,
@@ -262,7 +330,7 @@ fun TarjetaProducto(
             modifier = Modifier.padding(18.dp)
         ) {
 
-            // Fotografía del producto
+            // FOTOGRAFÍA DEL PRODUCTO
             ImagenProducto(
                 rutaFoto = producto.foto,
                 modifier = Modifier.fillMaxWidth(),
@@ -334,7 +402,6 @@ fun TarjetaProducto(
         }
     }
 }
-
 
 @Composable
 fun DatoProducto(

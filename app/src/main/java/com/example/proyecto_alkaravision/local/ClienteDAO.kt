@@ -1,3 +1,4 @@
+
 package com.example.proyecto_alkaravision.local
 
 import androidx.room.Dao
@@ -18,6 +19,19 @@ interface ClienteDao {
 
     @Query("SELECT * FROM clientes WHERE identidad = :identidad LIMIT 1")
     suspend fun buscarCliente(identidad: String): ClienteEntity?
+
+    @Query("""
+        SELECT * FROM clientes
+        WHERE nombre LIKE '%' || :busqueda || '%'
+        OR identidad LIKE '%' || :busqueda || '%'
+        OR telefono LIKE '%' || :busqueda || '%'
+        OR correo LIKE '%' || :busqueda || '%'
+        OR direccion LIKE '%' || :busqueda || '%'
+        ORDER BY nombre ASC
+    """)
+    fun buscarClientesPorTexto(
+        busqueda: String
+    ): Flow<List<ClienteEntity>>
 
     @Update
     suspend fun actualizarCliente(cliente: ClienteEntity)
