@@ -106,7 +106,6 @@ fun ConsultaProductosScreen(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // BUSCADOR DE PRODUCTOS
         OutlinedTextField(
             value = busqueda,
             onValueChange = { busqueda = it },
@@ -231,7 +230,6 @@ fun ConsultaProductosScreen(
         }
     }
 
-    // VENTANA DE CONFIRMACIÓN PARA ELIMINAR
     productoEliminar?.let { producto ->
 
         AlertDialog(
@@ -277,7 +275,7 @@ fun ConsultaProductosScreen(
 
                                 Toast.makeText(
                                     context,
-                                    "Error al eliminar: ${e.message}",
+                                    "No se pudo eliminar el producto. Inténtalo nuevamente.",
                                     Toast.LENGTH_LONG
                                 ).show()
 
@@ -328,7 +326,6 @@ fun TarjetaProducto(
             modifier = Modifier.padding(18.dp)
         ) {
 
-            // FOTOGRAFÍA DEL PRODUCTO
             ImagenProducto(
                 rutaFoto = producto.foto,
                 modifier = Modifier.fillMaxWidth(),
@@ -343,6 +340,27 @@ fun TarjetaProducto(
                 fontSize = 19.sp,
                 fontWeight = FontWeight.Bold
             )
+
+            if (producto.cantidad == 0) {
+
+                Text(
+                    text = "⚠ PRODUCTO AGOTADO",
+                    color = Color(0xFFFF5252),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+
+            } else if (producto.cantidad <= 5) {
+
+                Text(
+                    text = "⚠ INVENTARIO BAJO: Quedan ${producto.cantidad} unidades",
+                    color = Color(0xFFFFB74D),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+            }
 
             Spacer(modifier = Modifier.height(12.dp))
 

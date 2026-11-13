@@ -180,8 +180,12 @@ fun AddProductoScreen(
             Button(
                 onClick = {
 
-                    val precioConvertido = precio.toDoubleOrNull()
-                    val cantidadConvertida = cantidad.toIntOrNull()
+
+                    val precioConvertido = precio.trim()
+                        .replace(',', '.')
+                        .toDoubleOrNull()
+
+                    val cantidadConvertida = cantidad.trim().toIntOrNull()
 
                     if (
                         codigo.isBlank() ||
@@ -201,15 +205,25 @@ fun AddProductoScreen(
 
                     } else if (
                         precioConvertido == null ||
-                        precioConvertido < 0 ||
+                        !precioConvertido.isFinite() ||
+                        precioConvertido <= 0.0
+                    ) {
+
+                        Toast.makeText(
+                            context,
+                            "El precio debe ser un número mayor que cero",
+                            Toast.LENGTH_LONG
+                        ).show()
+
+                    } else if (
                         cantidadConvertida == null ||
                         cantidadConvertida < 0
                     ) {
 
                         Toast.makeText(
                             context,
-                            "Verifica el precio y la cantidad",
-                            Toast.LENGTH_SHORT
+                            "La cantidad debe ser un número entero igual o mayor que cero",
+                            Toast.LENGTH_LONG
                         ).show()
 
                     } else {
