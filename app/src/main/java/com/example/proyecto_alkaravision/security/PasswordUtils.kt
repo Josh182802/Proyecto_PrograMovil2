@@ -18,6 +18,7 @@ object PasswordUtils {
         return Base64.encodeToString(salt, Base64.NO_WRAP)
     }
 
+
     fun generarHash(contrasena: String, salt: String): String {
 
         val saltBytes = Base64.decode(salt, Base64.NO_WRAP)
@@ -29,13 +30,19 @@ object PasswordUtils {
             LONGITUD_HASH
         )
 
-        val fabrica = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
-        val hash = fabrica.generateSecret(especificacion).encoded
+        try {
 
-        especificacion.clearPassword()
+            val fabrica = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
 
-        return Base64.encodeToString(hash, Base64.NO_WRAP)
+            val hash = fabrica.generateSecret(especificacion).encoded
+
+            return Base64.encodeToString(hash, Base64.NO_WRAP)
+
+        } finally {
+            especificacion.clearPassword()
+        }
     }
+
 
     fun verificarContrasena(
         contrasena: String,

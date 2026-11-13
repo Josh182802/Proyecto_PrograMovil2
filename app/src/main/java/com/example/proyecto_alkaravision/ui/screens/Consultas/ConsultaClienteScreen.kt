@@ -106,7 +106,6 @@ fun ConsultaClientesScreen(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // BUSCADOR DE CLIENTES
         OutlinedTextField(
             value = busqueda,
             onValueChange = { busqueda = it },
@@ -227,7 +226,6 @@ fun ConsultaClientesScreen(
         }
     }
 
-    // VENTANA DE CONFIRMACIÓN PARA ELIMINAR
     clienteEliminar?.let { cliente ->
 
         AlertDialog(
@@ -272,7 +270,7 @@ fun ConsultaClientesScreen(
 
                                 Toast.makeText(
                                     context,
-                                    "Error al eliminar: ${e.message}",
+                                    "No se pudo eliminar el cliente. Inténtalo nuevamente.",
                                     Toast.LENGTH_LONG
                                 ).show()
 

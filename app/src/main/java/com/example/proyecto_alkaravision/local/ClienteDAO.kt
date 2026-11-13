@@ -17,7 +17,8 @@ interface ClienteDao {
     @Query("SELECT * FROM clientes ORDER BY nombre ASC")
     fun obtenerClientes(): Flow<List<ClienteEntity>>
 
-    @Query("SELECT * FROM clientes WHERE identidad = :identidad LIMIT 1")
+    @Query("""SELECT * FROM clientes WHERE TRIM(identidad) COLLATE NOCASE =
+          TRIM(:identidad) COLLATE NOCASE LIMIT 1""")
     suspend fun buscarCliente(identidad: String): ClienteEntity?
 
     @Query("SELECT * FROM clientes WHERE id = :id LIMIT 1")

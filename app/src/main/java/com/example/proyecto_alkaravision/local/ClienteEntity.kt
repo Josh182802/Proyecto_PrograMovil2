@@ -1,10 +1,16 @@
-
 package com.example.proyecto_alkaravision.local
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "clientes")
+@Entity(
+    tableName = "clientes",
+    indices = [
+        Index(value = ["identidad"], unique = true)
+    ]
+)
 data class ClienteEntity(
 
     @PrimaryKey(autoGenerate = true)
@@ -12,6 +18,7 @@ data class ClienteEntity(
 
     val nombre: String,
 
+    @ColumnInfo(collate = ColumnInfo.NOCASE)
     val identidad: String,
 
     val telefono: String,

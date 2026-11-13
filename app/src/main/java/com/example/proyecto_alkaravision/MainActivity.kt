@@ -115,36 +115,48 @@ fun PantallaLogin(
     val preferencias = remember { context.getSharedPreferences( "alkaravision_preferencias",
             Context.MODE_PRIVATE) }
 
+
     LaunchedEffect(Unit) {
-        recordar = preferencias.getBoolean("recordar_usuario", false)
 
-        if (recordar) {
-            usuario = preferencias.getString("usuario_recordado", "") ?: ""
-        }
+        try {
 
-        withContext(Dispatchers.IO) {
+            recordar = preferencias.getBoolean("recordar_usuario", false)
 
-            if (usuarioDao.contarUsuarios() == 0) {
-
-                val salt = PasswordUtils.generarSalt()
-
-                val hash = PasswordUtils.generarHash(
-                    "Admin123*",
-                    salt
-                )
-
-                usuarioDao.insertarUsuario(
-                    UsuarioEntity(
-                        usuario = "admin",
-                        passwordHash = hash,
-                        salt = salt
-                    )
-                )
+            if (recordar) {
+                usuario = preferencias.getString("usuario_recordado", "") ?: ""
             }
-        }
 
-        inicializado = true
+            withContext(Dispatchers.IO) {
+
+                if (usuarioDao.contarUsuarios() == 0) {
+
+                    val salt = PasswordUtils.generarSalt()
+
+                    val hash = PasswordUtils.generarHash(
+                        "Admin123*",
+                        salt
+                    )
+
+                    usuarioDao.insertarUsuario(
+                        UsuarioEntity(
+                            usuario = "admin",
+                            passwordHash = hash,
+                            salt = salt
+                        )
+                    )
+                }
+            }
+
+        } catch (e: Exception) {
+
+            mensaje = "No se pudo inicializar la aplicación. Inténtalo nuevamente."
+
+        } finally {
+
+            inicializado = true
+        }
     }
+
 
     Box(
         modifier = Modifier
@@ -348,53 +360,66 @@ fun PantallaLogin(
                             cargando = true
                             mensaje = ""
 
-                            val resultado = withContext(Dispatchers.IO) {
+                            try {
 
-                                val usuarioEncontrado =
-                                    usuarioDao.buscarUsuario(usuario.trim())
+                                val resultado = withContext(Dispatchers.IO) {
 
-                                if (usuarioEncontrado == null) {
+                                    val usuarioEncontrado =
+                                        usuarioDao.buscarUsuario(usuario.trim())
 
-                                    "Usuario no encontrado"
+                                    if (usuarioEncontrado == null) {
 
-                                } else {
+                                        "Usuario o contraseña incorrectos"
 
-                                    val contrasenaCorrecta =
-                                        PasswordUtils.verificarContrasena(
-                                            contrasena,
-                                            usuarioEncontrado.passwordHash,
-                                            usuarioEncontrado.salt
-                                        )
-
-                                    if (contrasenaCorrecta) {
-                                        "CORRECTO"
                                     } else {
-                                        "Contraseña incorrecta"
+
+                                        val contrasenaCorrecta =
+                                            PasswordUtils.verificarContrasena(
+                                                contrasena,
+                                                usuarioEncontrado.passwordHash,
+                                                usuarioEncontrado.salt
+                                            )
+
+                                        if (contrasenaCorrecta) {
+                                            "CORRECTO"
+                                        } else {
+                                            "Usuario o contraseña incorrectos"
+                                        }
                                     }
                                 }
-                            }
 
-                            cargando = false
+                                if (resultado == "CORRECTO") {
 
-                            if (resultado == "CORRECTO") {
-                                if (recordar) {
+                                    if (recordar) {
 
-                                    preferencias.edit()
-                                        .putBoolean("recordar_usuario", true)
-                                        .putString("usuario_recordado", usuario.trim())
-                                        .apply()
+                                        preferencias.edit()
+                                            .putBoolean("recordar_usuario", true)
+                                            .putString("usuario_recordado", usuario.trim())
+                                            .apply()
+
+                                    } else {
+
+                                        preferencias.edit()
+                                            .remove("usuario_recordado")
+                                            .putBoolean("recordar_usuario", false)
+                                            .apply()
+                                    }
+
+                                    contrasena = ""
+                                    onLoginExitoso()
 
                                 } else {
 
-                                    preferencias.edit()
-                                        .remove("usuario_recordado")
-                                        .putBoolean("recordar_usuario", false)
-                                        .apply()
+                                    mensaje = resultado
                                 }
 
-                                onLoginExitoso()
-                            } else {
-                                mensaje = resultado
+                            } catch (e: Exception) {
+
+                                mensaje = "Ocurrió un error al iniciar sesión. Inténtalo nuevamente."
+
+                            } finally {
+
+                                cargando = false
                             }
                         }
                     }
