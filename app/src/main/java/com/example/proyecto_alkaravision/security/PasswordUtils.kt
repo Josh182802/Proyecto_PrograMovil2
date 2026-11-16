@@ -18,7 +18,6 @@ object PasswordUtils {
         return Base64.encodeToString(salt, Base64.NO_WRAP)
     }
 
-
     fun generarHash(contrasena: String, salt: String): String {
 
         val saltBytes = Base64.decode(salt, Base64.NO_WRAP)

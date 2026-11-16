@@ -42,6 +42,7 @@ import com.example.proyecto_alkaravision.local.ClienteEntity
 import com.example.proyecto_alkaravision.ui.screens.Add.AddClienteScreen
 import com.example.proyecto_alkaravision.ui.screens.Consultas.ConsultaClientesScreen
 import com.example.proyecto_alkaravision.ui.screens.Editar.EditarClienteScreen
+import com.example.proyecto_alkaravision.ui.screens.Usuarios.CambiarContrasenaScreen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -62,18 +63,26 @@ class MainActivity : ComponentActivity() {
                 mutableStateOf(false)
             }
 
+            var usuarioSesion by rememberSaveable {
+                mutableStateOf("")
+            }
+
             if (sesionIniciada) {
                 PantallaPrincipal(
                     productoDao = productoDao,
                     clienteDao = clienteDao,
+                    usuarioDao = usuarioDao,
+                    usuarioActual = usuarioSesion,
                     onCerrarSesion = {
                         sesionIniciada = false
+                        usuarioSesion = ""
                     }
                 )
             } else {
                 PantallaLogin(
                     usuarioDao = usuarioDao,
-                    onLoginExitoso = {
+                    onLoginExitoso = { nombreUsuario ->
+                        usuarioSesion = nombreUsuario
                         sesionIniciada = true
                     }
                 )
@@ -82,11 +91,10 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-
 @Composable
 fun PantallaLogin(
     usuarioDao: UsuarioDao,
-    onLoginExitoso: () -> Unit
+    onLoginExitoso: (String) -> Unit
 ) {
 
     var usuario by rememberSaveable { mutableStateOf("") }
@@ -112,9 +120,12 @@ fun PantallaLogin(
 
     val context = LocalContext.current
 
-    val preferencias = remember { context.getSharedPreferences( "alkaravision_preferencias",
-            Context.MODE_PRIVATE) }
-
+    val preferencias = remember {
+        context.getSharedPreferences(
+            "alkaravision_preferencias",
+            Context.MODE_PRIVATE
+        )
+    }
 
     LaunchedEffect(Unit) {
 
@@ -156,7 +167,6 @@ fun PantallaLogin(
             inicializado = true
         }
     }
-
 
     Box(
         modifier = Modifier
@@ -406,7 +416,7 @@ fun PantallaLogin(
                                     }
 
                                     contrasena = ""
-                                    onLoginExitoso()
+                                    onLoginExitoso(usuario.trim())
 
                                 } else {
 
@@ -487,11 +497,14 @@ fun PantallaLogin(
 fun PantallaPrincipal(
     productoDao: ProductoDao,
     clienteDao: ClienteDao,
+    usuarioDao: UsuarioDao,
+    usuarioActual: String,
     onCerrarSesion: () -> Unit
 ) {
 
     var mostrarInventario by rememberSaveable { mutableStateOf(false) }
     var mostrarClientes by rememberSaveable { mutableStateOf(false) }
+    var mostrarCambioContrasena by rememberSaveable { mutableStateOf(false) }
 
     var opcionInventario by rememberSaveable { mutableStateOf("") }
     var productoSeleccionadoId by rememberSaveable { mutableIntStateOf(-1) }
@@ -524,7 +537,17 @@ fun PantallaPrincipal(
         }
     }
 
-    if (mostrarInventario) {
+    if (mostrarCambioContrasena) {
+
+        CambiarContrasenaScreen(
+            usuarioDao = usuarioDao,
+            usuarioActual = usuarioActual,
+            onVolver = {
+                mostrarCambioContrasena = false
+            }
+        )
+
+    } else if (mostrarInventario) {
 
         when (opcionInventario) {
 
@@ -648,13 +671,14 @@ fun PantallaPrincipal(
                             Icons.Default.ArrowBack,
                             contentDescription = null
                         )
+
                         Spacer(modifier = Modifier.width(8.dp))
+
                         Text("VOLVER AL MENÚ")
                     }
                 }
             }
         }
-
 
     } else if (mostrarClientes) {
 
@@ -797,7 +821,6 @@ fun PantallaPrincipal(
         }
 
     } else {
-
 
         Box(
             modifier = Modifier
@@ -949,6 +972,59 @@ fun PantallaPrincipal(
 
                             Text(
                                 text = "Administración de clientes registrados",
+                                color = Color.LightGray,
+                                fontSize = 13.sp
+                            )
+                        }
+                    }
+                }
+
+                // NUEVA OPCIÓN: CAMBIAR CONTRASEÑA
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                ElevatedCard(
+                    onClick = {
+                        mostrarCambioContrasena = true
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(125.dp),
+                    colors = CardDefaults.elevatedCardColors(
+                        containerColor = Color(0xFF10294A)
+                    ),
+                    shape = RoundedCornerShape(20.dp)
+                ) {
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(20.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+
+                        Icon(
+                            imageVector = Icons.Default.LockReset,
+                            contentDescription = null,
+                            tint = celeste,
+                            modifier = Modifier.size(55.dp)
+                        )
+
+                        Spacer(modifier = Modifier.width(20.dp))
+
+                        Column {
+
+                            Text(
+                                text = "CAMBIAR CONTRASEÑA",
+                                color = Color.White,
+                                fontSize = 19.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Text(
+                                text = "Actualiza la contraseña de tu cuenta",
                                 color = Color.LightGray,
                                 fontSize = 13.sp
                             )
