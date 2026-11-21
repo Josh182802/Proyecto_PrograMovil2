@@ -14,7 +14,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         ProductoEntity::class,
         ClienteEntity::class
     ],
-    version = 8,
+    version = 9,
     exportSchema = false
 )
 abstract class AlkaravisionDatabase : RoomDatabase() {
@@ -172,6 +172,26 @@ abstract class AlkaravisionDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_8_9 = object : Migration(8, 9) {
+
+            override fun migrate(database: SupportSQLiteDatabase) {
+
+                database.execSQL(
+                    """
+            ALTER TABLE usuarios
+            ADD COLUMN correo TEXT COLLATE NOCASE NOT NULL DEFAULT ''
+            """.trimIndent()
+                )
+
+                database.execSQL(
+                    """
+            CREATE INDEX IF NOT EXISTS index_usuarios_correo
+            ON usuarios(correo COLLATE NOCASE)
+            """.trimIndent()
+                )
+            }
+        }
+
         fun obtenerBaseDatos(context: Context): AlkaravisionDatabase {
 
             return INSTANCE ?: synchronized(this) {
@@ -188,7 +208,8 @@ abstract class AlkaravisionDatabase : RoomDatabase() {
                         MIGRATION_4_5,
                         MIGRATION_5_6,
                         MIGRATION_6_7,
-                        MIGRATION_7_8
+                        MIGRATION_7_8,
+                        MIGRATION_8_9
                     )
                     .build()
 

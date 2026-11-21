@@ -1,4 +1,3 @@
-
 package com.example.proyecto_alkaravision.local
 
 import androidx.room.ColumnInfo
@@ -9,7 +8,8 @@ import androidx.room.PrimaryKey
 @Entity(
     tableName = "usuarios",
     indices = [
-        Index(value = ["usuario"], unique = true)
+        Index(value = ["usuario"], unique = true),
+        Index(value = ["correo"])
     ]
 )
 data class UsuarioEntity(
@@ -19,6 +19,9 @@ data class UsuarioEntity(
 
     @ColumnInfo(collate = ColumnInfo.NOCASE)
     val usuario: String,
+
+    @ColumnInfo(collate = ColumnInfo.NOCASE)
+    val correo: String,
 
     val passwordHash: String,
 

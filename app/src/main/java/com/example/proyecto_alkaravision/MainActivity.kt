@@ -43,9 +43,12 @@ import com.example.proyecto_alkaravision.ui.screens.Add.AddClienteScreen
 import com.example.proyecto_alkaravision.ui.screens.Consultas.ConsultaClientesScreen
 import com.example.proyecto_alkaravision.ui.screens.Editar.EditarClienteScreen
 import com.example.proyecto_alkaravision.ui.screens.Usuarios.CambiarContrasenaScreen
+import com.example.proyecto_alkaravision.security.FirebaseAuthManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.tasks.await
+import com.google.firebase.auth.FirebaseAuthException
 
 class MainActivity : ComponentActivity() {
 
@@ -127,10 +130,9 @@ fun PantallaLogin(
         )
     }
 
+
     LaunchedEffect(Unit) {
-
         try {
-
             recordar = preferencias.getBoolean("recordar_usuario", false)
 
             if (recordar) {
@@ -138,7 +140,6 @@ fun PantallaLogin(
             }
 
             withContext(Dispatchers.IO) {
-
                 if (usuarioDao.contarUsuarios() == 0) {
 
                     val salt = PasswordUtils.generarSalt()
@@ -151,22 +152,27 @@ fun PantallaLogin(
                     usuarioDao.insertarUsuario(
                         UsuarioEntity(
                             usuario = "admin",
+                            correo = "josephgerardo2002@gmail.com",
                             passwordHash = hash,
                             salt = salt
                         )
+                    )
+
+                } else {
+                    usuarioDao.actualizarCorreoUsuario(
+                        nombreUsuario = "admin",
+                        correo = "josephgerardo2002@gmail.com"
                     )
                 }
             }
 
         } catch (e: Exception) {
-
             mensaje = "No se pudo inicializar la aplicación. Inténtalo nuevamente."
-
         } finally {
-
             inicializado = true
         }
     }
+
 
     Box(
         modifier = Modifier
@@ -370,31 +376,34 @@ fun PantallaLogin(
                             cargando = true
                             mensaje = ""
 
+
                             try {
 
-                                val resultado = withContext(Dispatchers.IO) {
+                                val usuarioEncontrado = withContext(Dispatchers.IO) {
+                                    usuarioDao.buscarUsuario(usuario.trim())
+                                }
 
-                                    val usuarioEncontrado =
-                                        usuarioDao.buscarUsuario(usuario.trim())
+                                val resultado = if (usuarioEncontrado == null) {
 
-                                    if (usuarioEncontrado == null) {
+                                    "No existe este usuario."
 
-                                        "Usuario o contraseña incorrectos"
+                                } else if (usuarioEncontrado.correo.isBlank()) {
 
+                                    "El usuario no tiene un correo asociado."
+
+                                } else {
+
+                                    val autenticacion = FirebaseAuthManager.auth
+                                        .signInWithEmailAndPassword(
+                                            usuarioEncontrado.correo,
+                                            contrasena
+                                        )
+                                        .await()
+
+                                    if (autenticacion.user != null) {
+                                        "CORRECTO"
                                     } else {
-
-                                        val contrasenaCorrecta =
-                                            PasswordUtils.verificarContrasena(
-                                                contrasena,
-                                                usuarioEncontrado.passwordHash,
-                                                usuarioEncontrado.salt
-                                            )
-
-                                        if (contrasenaCorrecta) {
-                                            "CORRECTO"
-                                        } else {
-                                            "Usuario o contraseña incorrectos"
-                                        }
+                                        "Usuario o contraseña incorrectos"
                                     }
                                 }
 
@@ -423,6 +432,29 @@ fun PantallaLogin(
                                     mensaje = resultado
                                 }
 
+                            } catch (e: FirebaseAuthException) {
+
+                                mensaje = when (e.errorCode) {
+                                    "ERROR_INVALID_CREDENTIAL",
+                                    "ERROR_WRONG_PASSWORD",
+                                    "ERROR_USER_NOT_FOUND",
+                                    "ERROR_INVALID_EMAIL" -> {
+                                        "Usuario o contraseña incorrectos"
+                                    }
+
+                                    "ERROR_TOO_MANY_REQUESTS" -> {
+                                        "Demasiados intentos. Inténtalo más tarde."
+                                    }
+
+                                    "ERROR_USER_DISABLED" -> {
+                                        "Esta cuenta se encuentra deshabilitada."
+                                    }
+
+                                    else -> {
+                                        "No se pudo validar la cuenta. Inténtalo nuevamente."
+                                    }
+                                }
+
                             } catch (e: Exception) {
 
                                 mensaje = "Ocurrió un error al iniciar sesión. Inténtalo nuevamente."
@@ -431,6 +463,7 @@ fun PantallaLogin(
 
                                 cargando = false
                             }
+
                         }
                     }
                 },
@@ -978,8 +1011,6 @@ fun PantallaPrincipal(
                         }
                     }
                 }
-
-                // NUEVA OPCIÓN: CAMBIAR CONTRASEÑA
 
                 Spacer(modifier = Modifier.height(20.dp))
 

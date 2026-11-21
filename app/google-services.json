@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1038485546963",
+    "project_id": "alkaravision-a03a2",
+    "storage_bucket": "alkaravision-a03a2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1038485546963:android:3c1417f05852fbe75f7126",
+        "android_client_info": {
+          "package_name": "com.example.proyecto_alkaravision"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBGlPgABkyxt5nnZTb-Bv_ht8_Z2T1hCxc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

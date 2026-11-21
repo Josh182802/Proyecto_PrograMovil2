@@ -10,16 +10,41 @@ interface UsuarioDao {
     @Insert
     suspend fun insertarUsuario(usuario: UsuarioEntity)
 
-    @Query("""SELECT * FROM usuarios WHERE usuario = :nombreUsuario COLLATE NOCASE LIMIT 1""")
+    @Query("""
+        SELECT * FROM usuarios
+        WHERE usuario = :nombreUsuario COLLATE NOCASE
+        LIMIT 1
+    """)
     suspend fun buscarUsuario(nombreUsuario: String): UsuarioEntity?
+
+    @Query("""
+        SELECT * FROM usuarios
+        WHERE correo = :correo COLLATE NOCASE
+        LIMIT 1
+    """)
+    suspend fun buscarUsuarioPorCorreo(correo: String): UsuarioEntity?
 
     @Query("SELECT COUNT(*) FROM usuarios")
     suspend fun contarUsuarios(): Int
 
-    @Query("""UPDATE usuarios SET passwordHash = :nuevoHash, salt = :nuevoSalt WHERE id = :usuarioId""")
+    @Query("""
+        UPDATE usuarios
+        SET passwordHash = :nuevoHash, salt = :nuevoSalt
+        WHERE id = :usuarioId
+    """)
     suspend fun actualizarContrasena(
         usuarioId: Int,
         nuevoHash: String,
         nuevoSalt: String
+    )
+
+    @Query("""
+    UPDATE usuarios
+    SET correo = :correo
+    WHERE usuario = :nombreUsuario COLLATE NOCASE
+    """)
+    suspend fun actualizarCorreoUsuario(
+        nombreUsuario: String,
+        correo: String
     )
 }
