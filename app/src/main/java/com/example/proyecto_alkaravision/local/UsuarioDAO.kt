@@ -29,19 +29,8 @@ interface UsuarioDao {
 
     @Query("""
         UPDATE usuarios
-        SET passwordHash = :nuevoHash, salt = :nuevoSalt
-        WHERE id = :usuarioId
-    """)
-    suspend fun actualizarContrasena(
-        usuarioId: Int,
-        nuevoHash: String,
-        nuevoSalt: String
-    )
-
-    @Query("""
-    UPDATE usuarios
-    SET correo = :correo
-    WHERE usuario = :nombreUsuario COLLATE NOCASE
+        SET correo = :correo
+        WHERE usuario = :nombreUsuario COLLATE NOCASE
     """)
     suspend fun actualizarCorreoUsuario(
         nombreUsuario: String,

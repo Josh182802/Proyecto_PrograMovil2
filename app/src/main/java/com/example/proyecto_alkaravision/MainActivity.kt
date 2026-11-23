@@ -31,7 +31,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import com.example.proyecto_alkaravision.local.AlkaravisionDatabase
 import com.example.proyecto_alkaravision.local.UsuarioDao
 import com.example.proyecto_alkaravision.local.UsuarioEntity
-import com.example.proyecto_alkaravision.security.PasswordUtils
 import com.example.proyecto_alkaravision.local.ProductoDao
 import com.example.proyecto_alkaravision.ui.screens.Add.AddProductoScreen
 import com.example.proyecto_alkaravision.ui.screens.Consultas.ConsultaProductosScreen
@@ -77,6 +76,7 @@ class MainActivity : ComponentActivity() {
                     usuarioDao = usuarioDao,
                     usuarioActual = usuarioSesion,
                     onCerrarSesion = {
+                        FirebaseAuthManager.auth.signOut()
                         sesionIniciada = false
                         usuarioSesion = ""
                     }
@@ -142,19 +142,10 @@ fun PantallaLogin(
             withContext(Dispatchers.IO) {
                 if (usuarioDao.contarUsuarios() == 0) {
 
-                    val salt = PasswordUtils.generarSalt()
-
-                    val hash = PasswordUtils.generarHash(
-                        "Admin123*",
-                        salt
-                    )
-
                     usuarioDao.insertarUsuario(
                         UsuarioEntity(
                             usuario = "admin",
-                            correo = "josephgerardo2002@gmail.com",
-                            passwordHash = hash,
-                            salt = salt
+                            correo = "josephgerardo2002@gmail.com"
                         )
                     )
 
@@ -349,7 +340,34 @@ fun PantallaLogin(
 
                 TextButton(
                     onClick = {
-                        mensaje = "Contacta con soporte para recuperar tu contraseña"
+                        scope.launch {
+                            try {
+                                val usuarioEncontrado = withContext(Dispatchers.IO) {
+                                    usuarioDao.buscarUsuario(usuario.trim())
+                                }
+
+                                if (usuarioEncontrado == null) {
+
+                                    mensaje = "No se encontró el usuario"
+
+                                } else if (usuarioEncontrado.correo.isBlank()) {
+
+                                    mensaje = "El usuario no tiene un correo asociado"
+
+                                } else {
+
+                                    FirebaseAuthManager.auth
+                                        .sendPasswordResetEmail(usuarioEncontrado.correo)
+                                        .await()
+
+                                    mensaje = "Se envió un correo para restablecer tu contraseña"
+                                }
+
+                            } catch (e: Exception) {
+
+                                mensaje = "No se pudo enviar el correo de recuperación. Inténtalo nuevamente."
+                            }
+                        }
                     }
                 ) {
                     Text(

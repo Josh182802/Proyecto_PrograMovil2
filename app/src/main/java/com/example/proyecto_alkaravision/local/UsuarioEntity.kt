@@ -21,9 +21,5 @@ data class UsuarioEntity(
     val usuario: String,
 
     @ColumnInfo(collate = ColumnInfo.NOCASE)
-    val correo: String,
-
-    val passwordHash: String,
-
-    val salt: String
+    val correo: String
 )

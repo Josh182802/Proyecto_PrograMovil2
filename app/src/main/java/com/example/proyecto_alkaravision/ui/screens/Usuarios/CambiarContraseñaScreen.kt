@@ -23,10 +23,13 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
 import android.widget.Toast
 import com.example.proyecto_alkaravision.local.UsuarioDao
-import com.example.proyecto_alkaravision.security.PasswordUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.example.proyecto_alkaravision.security.FirebaseAuthManager
+import com.google.firebase.auth.EmailAuthProvider
+import com.google.firebase.auth.FirebaseAuthException
+import kotlinx.coroutines.tasks.await
 
 @Composable
 fun CambiarContrasenaScreen(
@@ -292,52 +295,45 @@ fun CambiarContrasenaScreen(
 
                                 try {
 
-                                    val resultado = withContext(Dispatchers.IO) {
+                                    val usuario = withContext(Dispatchers.IO) {
+                                        usuarioDao.buscarUsuario(usuarioActual)
+                                    }
 
-                                        val usuario = usuarioDao.buscarUsuario(
-                                            usuarioActual
-                                        )
+                                    val resultado = if (usuario == null) {
 
-                                        if (usuario == null) {
+                                        "No se encontró el usuario"
 
-                                            "No se encontró el usuario"
+                                    } else if (usuario.correo.isBlank()) {
 
-                                        } else if (
-                                            !PasswordUtils.verificarContrasena(
-                                                contrasenaActual,
-                                                usuario.passwordHash,
-                                                usuario.salt
-                                            )
+                                        "El usuario no tiene un correo asociado"
+
+                                    } else if (nuevaContrasena == contrasenaActual) {
+
+                                        "Debes utilizar una contraseña diferente"
+
+                                    } else {
+
+                                        val usuarioFirebase = FirebaseAuthManager.auth.currentUser
+
+                                        if (usuarioFirebase == null ||
+                                            usuarioFirebase.email?.equals(
+                                                usuario.correo,
+                                                ignoreCase = true
+                                            ) != true
                                         ) {
 
-                                            "La contraseña actual es incorrecta"
-
-                                        } else if (
-                                            PasswordUtils.verificarContrasena(
-                                                nuevaContrasena,
-                                                usuario.passwordHash,
-                                                usuario.salt
-                                            )
-                                        ) {
-
-                                            "Debes utilizar una contraseña diferente"
+                                            "La sesión de Firebase no está activa"
 
                                         } else {
 
-                                            val nuevoSalt =
-                                                PasswordUtils.generarSalt()
-
-                                            val nuevoHash =
-                                                PasswordUtils.generarHash(
-                                                    nuevaContrasena,
-                                                    nuevoSalt
-                                                )
-
-                                            usuarioDao.actualizarContrasena(
-                                                usuario.id,
-                                                nuevoHash,
-                                                nuevoSalt
+                                            val credencial = EmailAuthProvider.getCredential(
+                                                usuario.correo,
+                                                contrasenaActual
                                             )
+
+                                            usuarioFirebase.reauthenticate(credencial).await()
+
+                                            usuarioFirebase.updatePassword(nuevaContrasena).await()
 
                                             "CORRECTO"
                                         }
@@ -365,6 +361,29 @@ fun CambiarContrasenaScreen(
                                             Toast.LENGTH_LONG
                                         ).show()
                                     }
+
+                                } catch (e: FirebaseAuthException) {
+
+                                    val error = when (e.errorCode) {
+                                        "ERROR_INVALID_CREDENTIAL",
+                                        "ERROR_WRONG_PASSWORD" -> {
+                                            "La contraseña actual es incorrecta"
+                                        }
+
+                                        "ERROR_REQUIRES_RECENT_LOGIN" -> {
+                                            "Debes volver a iniciar sesión"
+                                        }
+
+                                        else -> {
+                                            "No se pudo actualizar la contraseña"
+                                        }
+                                    }
+
+                                    Toast.makeText(
+                                        context,
+                                        error,
+                                        Toast.LENGTH_LONG
+                                    ).show()
 
                                 } catch (e: Exception) {
 

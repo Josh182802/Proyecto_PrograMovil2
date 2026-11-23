@@ -14,7 +14,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         ProductoEntity::class,
         ClienteEntity::class
     ],
-    version = 9,
+    version = 10,
     exportSchema = false
 )
 abstract class AlkaravisionDatabase : RoomDatabase() {
@@ -192,6 +192,50 @@ abstract class AlkaravisionDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_9_10 = object : Migration(9, 10) {
+
+            override fun migrate(database: SupportSQLiteDatabase) {
+
+                database.execSQL(
+                    """
+            CREATE TABLE usuarios_nueva (
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                usuario TEXT NOT NULL COLLATE NOCASE,
+                correo TEXT NOT NULL COLLATE NOCASE
+            )
+            """.trimIndent()
+                )
+
+                database.execSQL(
+                    """
+            INSERT INTO usuarios_nueva (id, usuario, correo)
+            SELECT id, usuario, correo
+            FROM usuarios
+            """.trimIndent()
+                )
+
+                database.execSQL("DROP TABLE usuarios")
+
+                database.execSQL(
+                    "ALTER TABLE usuarios_nueva RENAME TO usuarios"
+                )
+
+                database.execSQL(
+                    """
+            CREATE UNIQUE INDEX index_usuarios_usuario
+            ON usuarios(usuario COLLATE NOCASE)
+            """.trimIndent()
+                )
+
+                database.execSQL(
+                    """
+            CREATE INDEX index_usuarios_correo
+            ON usuarios(correo COLLATE NOCASE)
+            """.trimIndent()
+                )
+            }
+        }
+
         fun obtenerBaseDatos(context: Context): AlkaravisionDatabase {
 
             return INSTANCE ?: synchronized(this) {
@@ -209,7 +253,8 @@ abstract class AlkaravisionDatabase : RoomDatabase() {
                         MIGRATION_5_6,
                         MIGRATION_6_7,
                         MIGRATION_7_8,
-                        MIGRATION_8_9
+                        MIGRATION_8_9,
+                        MIGRATION_9_10
                     )
                     .build()
 
