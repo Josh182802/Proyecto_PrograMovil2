@@ -25,18 +25,29 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.content.Context
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.saveable.rememberSaveable
 import com.example.proyecto_alkaravision.local.AlkaravisionDatabase
 import com.example.proyecto_alkaravision.local.UsuarioDao
 import com.example.proyecto_alkaravision.local.UsuarioEntity
-import com.example.proyecto_alkaravision.security.PasswordUtils
 import com.example.proyecto_alkaravision.local.ProductoDao
 import com.example.proyecto_alkaravision.ui.screens.Add.AddProductoScreen
 import com.example.proyecto_alkaravision.ui.screens.Consultas.ConsultaProductosScreen
 import com.example.proyecto_alkaravision.local.ProductoEntity
 import com.example.proyecto_alkaravision.ui.screens.Editar.EditarProductoScreen
+import com.example.proyecto_alkaravision.local.ClienteDao
+import com.example.proyecto_alkaravision.local.ClienteEntity
+import com.example.proyecto_alkaravision.ui.screens.Add.AddClienteScreen
+import com.example.proyecto_alkaravision.ui.screens.Consultas.ConsultaClientesScreen
+import com.example.proyecto_alkaravision.ui.screens.Editar.EditarClienteScreen
+import com.example.proyecto_alkaravision.ui.screens.Usuarios.CambiarContrasenaScreen
+import com.example.proyecto_alkaravision.security.FirebaseAuthManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.tasks.await
+import com.google.firebase.auth.FirebaseAuthException
 
 class MainActivity : ComponentActivity() {
 
@@ -45,25 +56,36 @@ class MainActivity : ComponentActivity() {
 
         val baseDatos = AlkaravisionDatabase.obtenerBaseDatos(this)
         val usuarioDao = baseDatos.usuarioDao()
-        val productoDao = AlkaravisionDatabase.obtenerBaseDatos(this).productoDao()
+        val productoDao = baseDatos.productoDao()
+        val clienteDao = baseDatos.clienteDao()
 
         setContent {
 
-            var sesionIniciada by remember {
+            var sesionIniciada by rememberSaveable {
                 mutableStateOf(false)
+            }
+
+            var usuarioSesion by rememberSaveable {
+                mutableStateOf("")
             }
 
             if (sesionIniciada) {
                 PantallaPrincipal(
-                    productoDao,
+                    productoDao = productoDao,
+                    clienteDao = clienteDao,
+                    usuarioDao = usuarioDao,
+                    usuarioActual = usuarioSesion,
                     onCerrarSesion = {
+                        FirebaseAuthManager.auth.signOut()
                         sesionIniciada = false
+                        usuarioSesion = ""
                     }
                 )
             } else {
                 PantallaLogin(
                     usuarioDao = usuarioDao,
-                    onLoginExitoso = {
+                    onLoginExitoso = { nombreUsuario ->
+                        usuarioSesion = nombreUsuario
                         sesionIniciada = true
                     }
                 )
@@ -75,12 +97,12 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun PantallaLogin(
     usuarioDao: UsuarioDao,
-    onLoginExitoso: () -> Unit
+    onLoginExitoso: (String) -> Unit
 ) {
 
-    var usuario by remember { mutableStateOf("") }
+    var usuario by rememberSaveable { mutableStateOf("") }
     var contrasena by remember { mutableStateOf("") }
-    var recordar by remember { mutableStateOf(false) }
+    var recordar by rememberSaveable { mutableStateOf(false) }
     var mostrarContrasena by remember { mutableStateOf(false) }
 
     var mensaje by remember { mutableStateOf("") }
@@ -99,31 +121,49 @@ fun PantallaLogin(
     val celeste = Color(0xFF16C5FF)
     val fondo = Color(0xFF050914)
 
-    LaunchedEffect(Unit) {
+    val context = LocalContext.current
 
-        withContext(Dispatchers.IO) {
-
-            if (usuarioDao.contarUsuarios() == 0) {
-
-                val salt = PasswordUtils.generarSalt()
-
-                val hash = PasswordUtils.generarHash(
-                    "Admin123*",
-                    salt
-                )
-
-                usuarioDao.insertarUsuario(
-                    UsuarioEntity(
-                        usuario = "admin",
-                        passwordHash = hash,
-                        salt = salt
-                    )
-                )
-            }
-        }
-
-        inicializado = true
+    val preferencias = remember {
+        context.getSharedPreferences(
+            "alkaravision_preferencias",
+            Context.MODE_PRIVATE
+        )
     }
+
+
+    LaunchedEffect(Unit) {
+        try {
+            recordar = preferencias.getBoolean("recordar_usuario", false)
+
+            if (recordar) {
+                usuario = preferencias.getString("usuario_recordado", "") ?: ""
+            }
+
+            withContext(Dispatchers.IO) {
+                if (usuarioDao.contarUsuarios() == 0) {
+
+                    usuarioDao.insertarUsuario(
+                        UsuarioEntity(
+                            usuario = "admin",
+                            correo = "josephgerardo2002@gmail.com"
+                        )
+                    )
+
+                } else {
+                    usuarioDao.actualizarCorreoUsuario(
+                        nombreUsuario = "admin",
+                        correo = "josephgerardo2002@gmail.com"
+                    )
+                }
+            }
+
+        } catch (e: Exception) {
+            mensaje = "No se pudo inicializar la aplicación. Inténtalo nuevamente."
+        } finally {
+            inicializado = true
+        }
+    }
+
 
     Box(
         modifier = Modifier
@@ -300,7 +340,34 @@ fun PantallaLogin(
 
                 TextButton(
                     onClick = {
-                        mensaje = "Contacta con soporte para recuperar tu contraseña"
+                        scope.launch {
+                            try {
+                                val usuarioEncontrado = withContext(Dispatchers.IO) {
+                                    usuarioDao.buscarUsuario(usuario.trim())
+                                }
+
+                                if (usuarioEncontrado == null) {
+
+                                    mensaje = "No se encontró el usuario"
+
+                                } else if (usuarioEncontrado.correo.isBlank()) {
+
+                                    mensaje = "El usuario no tiene un correo asociado"
+
+                                } else {
+
+                                    FirebaseAuthManager.auth
+                                        .sendPasswordResetEmail(usuarioEncontrado.correo)
+                                        .await()
+
+                                    mensaje = "Se envió un correo para restablecer tu contraseña"
+                                }
+
+                            } catch (e: Exception) {
+
+                                mensaje = "No se pudo enviar el correo de recuperación. Inténtalo nuevamente."
+                            }
+                        }
                     }
                 ) {
                     Text(
@@ -327,39 +394,94 @@ fun PantallaLogin(
                             cargando = true
                             mensaje = ""
 
-                            val resultado = withContext(Dispatchers.IO) {
 
-                                val usuarioEncontrado =
+                            try {
+
+                                val usuarioEncontrado = withContext(Dispatchers.IO) {
                                     usuarioDao.buscarUsuario(usuario.trim())
+                                }
 
-                                if (usuarioEncontrado == null) {
+                                val resultado = if (usuarioEncontrado == null) {
 
-                                    "Usuario no encontrado"
+                                    "No existe este usuario."
+
+                                } else if (usuarioEncontrado.correo.isBlank()) {
+
+                                    "El usuario no tiene un correo asociado."
 
                                 } else {
 
-                                    val contrasenaCorrecta =
-                                        PasswordUtils.verificarContrasena(
-                                            contrasena,
-                                            usuarioEncontrado.passwordHash,
-                                            usuarioEncontrado.salt
+                                    val autenticacion = FirebaseAuthManager.auth
+                                        .signInWithEmailAndPassword(
+                                            usuarioEncontrado.correo,
+                                            contrasena
                                         )
+                                        .await()
 
-                                    if (contrasenaCorrecta) {
+                                    if (autenticacion.user != null) {
                                         "CORRECTO"
                                     } else {
-                                        "Contraseña incorrecta"
+                                        "Usuario o contraseña incorrectos"
                                     }
                                 }
+
+                                if (resultado == "CORRECTO") {
+
+                                    if (recordar) {
+
+                                        preferencias.edit()
+                                            .putBoolean("recordar_usuario", true)
+                                            .putString("usuario_recordado", usuario.trim())
+                                            .apply()
+
+                                    } else {
+
+                                        preferencias.edit()
+                                            .remove("usuario_recordado")
+                                            .putBoolean("recordar_usuario", false)
+                                            .apply()
+                                    }
+
+                                    contrasena = ""
+                                    onLoginExitoso(usuario.trim())
+
+                                } else {
+
+                                    mensaje = resultado
+                                }
+
+                            } catch (e: FirebaseAuthException) {
+
+                                mensaje = when (e.errorCode) {
+                                    "ERROR_INVALID_CREDENTIAL",
+                                    "ERROR_WRONG_PASSWORD",
+                                    "ERROR_USER_NOT_FOUND",
+                                    "ERROR_INVALID_EMAIL" -> {
+                                        "Usuario o contraseña incorrectos"
+                                    }
+
+                                    "ERROR_TOO_MANY_REQUESTS" -> {
+                                        "Demasiados intentos. Inténtalo más tarde."
+                                    }
+
+                                    "ERROR_USER_DISABLED" -> {
+                                        "Esta cuenta se encuentra deshabilitada."
+                                    }
+
+                                    else -> {
+                                        "No se pudo validar la cuenta. Inténtalo nuevamente."
+                                    }
+                                }
+
+                            } catch (e: Exception) {
+
+                                mensaje = "Ocurrió un error al iniciar sesión. Inténtalo nuevamente."
+
+                            } finally {
+
+                                cargando = false
                             }
 
-                            cargando = false
-
-                            if (resultado == "CORRECTO") {
-                                onLoginExitoso()
-                            } else {
-                                mensaje = resultado
-                            }
                         }
                     }
                 },
@@ -422,25 +544,61 @@ fun PantallaLogin(
     }
 }
 
-
-
-
 @Composable
 fun PantallaPrincipal(
     productoDao: ProductoDao,
+    clienteDao: ClienteDao,
+    usuarioDao: UsuarioDao,
+    usuarioActual: String,
     onCerrarSesion: () -> Unit
 ) {
 
-    var mostrarInventario by remember { mutableStateOf(false) }
-    var mostrarClientes by remember { mutableStateOf(false) }
+    var mostrarInventario by rememberSaveable { mutableStateOf(false) }
+    var mostrarClientes by rememberSaveable { mutableStateOf(false) }
+    var mostrarCambioContrasena by rememberSaveable { mutableStateOf(false) }
 
-    var opcionInventario by remember { mutableStateOf("") }
+    var opcionInventario by rememberSaveable { mutableStateOf("") }
+    var productoSeleccionadoId by rememberSaveable { mutableIntStateOf(-1) }
     var productoSeleccionado by remember { mutableStateOf<ProductoEntity?>(null) }
+
+    var opcionClientes by rememberSaveable { mutableStateOf("") }
+    var clienteSeleccionadoId by rememberSaveable { mutableIntStateOf(-1) }
+    var clienteSeleccionado by remember { mutableStateOf<ClienteEntity?>(null) }
 
     val celeste = Color(0xFF16C5FF)
     val azul = Color(0xFF087DEB)
 
-    if (mostrarInventario) {
+    LaunchedEffect(clienteSeleccionadoId) {
+        clienteSeleccionado = if (clienteSeleccionadoId != -1) {
+            withContext(Dispatchers.IO) {
+                clienteDao.obtenerClientePorId(clienteSeleccionadoId)
+            }
+        } else {
+            null
+        }
+    }
+
+    LaunchedEffect(productoSeleccionadoId) {
+        productoSeleccionado = if (productoSeleccionadoId != -1) {
+            withContext(Dispatchers.IO) {
+                productoDao.obtenerProductoPorId(productoSeleccionadoId)
+            }
+        } else {
+            null
+        }
+    }
+
+    if (mostrarCambioContrasena) {
+
+        CambiarContrasenaScreen(
+            usuarioDao = usuarioDao,
+            usuarioActual = usuarioActual,
+            onVolver = {
+                mostrarCambioContrasena = false
+            }
+        )
+
+    } else if (mostrarInventario) {
 
         when (opcionInventario) {
 
@@ -460,6 +618,7 @@ fun PantallaPrincipal(
                         opcionInventario = ""
                     },
                     onEditar = { producto ->
+                        productoSeleccionadoId = producto.id
                         productoSeleccionado = producto
                         opcionInventario = "editar"
                     }
@@ -467,15 +626,38 @@ fun PantallaPrincipal(
             }
 
             "editar" -> {
-                productoSeleccionado?.let { producto ->
+                if (productoSeleccionado != null) {
                     EditarProductoScreen(
-                        producto = producto,
+                        producto = productoSeleccionado!!,
                         productoDao = productoDao,
                         onVolver = {
+                            productoSeleccionadoId = -1
                             productoSeleccionado = null
                             opcionInventario = "consultar"
                         }
                     )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color(0xFF050914)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            CircularProgressIndicator(
+                                color = Color(0xFF16C5FF)
+                            )
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            Text(
+                                text = "Recuperando información del producto...",
+                                color = Color.White
+                            )
+                        }
+                    }
                 }
             }
 
@@ -540,7 +722,9 @@ fun PantallaPrincipal(
                             Icons.Default.ArrowBack,
                             contentDescription = null
                         )
+
                         Spacer(modifier = Modifier.width(8.dp))
+
                         Text("VOLVER AL MENÚ")
                     }
                 }
@@ -549,26 +733,143 @@ fun PantallaPrincipal(
 
     } else if (mostrarClientes) {
 
-        AlertDialog(
-            onDismissRequest = {
-                mostrarClientes = false
-            },
-            title = {
-                Text("Clientes")
-            },
-            text = {
-                Text("El módulo de clientes estará disponible próximamente.")
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        mostrarClientes = false
+        when (opcionClientes) {
+
+            "registrar" -> {
+                AddClienteScreen(
+                    clienteDao = clienteDao,
+                    onVolver = {
+                        opcionClientes = ""
                     }
-                ) {
-                    Text("ACEPTAR")
+                )
+            }
+
+            "consultar" -> {
+                ConsultaClientesScreen(
+                    clienteDao = clienteDao,
+                    onVolver = {
+                        opcionClientes = ""
+                    },
+                    onEditar = { cliente ->
+                        clienteSeleccionadoId = cliente.id
+                        clienteSeleccionado = cliente
+                        opcionClientes = "editar"
+                    }
+                )
+            }
+
+            "editar" -> {
+
+                if (clienteSeleccionado != null) {
+
+                    EditarClienteScreen(
+                        cliente = clienteSeleccionado!!,
+                        clienteDao = clienteDao,
+                        onVolver = {
+                            clienteSeleccionadoId = -1
+                            clienteSeleccionado = null
+                            opcionClientes = "consultar"
+                        }
+                    )
+
+                } else {
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color(0xFF050914)),
+                        contentAlignment = Alignment.Center
+                    ) {
+
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+
+                            CircularProgressIndicator(
+                                color = Color(0xFF16C5FF)
+                            )
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            Text(
+                                text = "Recuperando información del cliente...",
+                                color = Color.White
+                            )
+                        }
+                    }
                 }
             }
-        )
+
+            else -> {
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color(0xFF050914))
+                        .padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+
+                    Text(
+                        text = "CLIENTES",
+                        color = Color.White,
+                        fontSize = 27.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Spacer(modifier = Modifier.height(30.dp))
+
+                    Button(
+                        onClick = {
+                            opcionClientes = "registrar"
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(60.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = azul
+                        )
+                    ) {
+                        Text("REGISTRAR CLIENTE")
+                    }
+
+                    Spacer(modifier = Modifier.height(18.dp))
+
+                    Button(
+                        onClick = {
+                            opcionClientes = "consultar"
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(60.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = azul
+                        )
+                    ) {
+                        Text("CONSULTAR CLIENTES")
+                    }
+
+                    Spacer(modifier = Modifier.height(30.dp))
+
+                    OutlinedButton(
+                        onClick = {
+                            mostrarClientes = false
+                            opcionClientes = ""
+                        }
+                    ) {
+                        Icon(
+                            Icons.Default.ArrowBack,
+                            contentDescription = null
+                        )
+
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        Text("VOLVER AL MENÚ")
+                    }
+                }
+            }
+        }
 
     } else {
 
@@ -729,6 +1030,57 @@ fun PantallaPrincipal(
                     }
                 }
 
+                Spacer(modifier = Modifier.height(20.dp))
+
+                ElevatedCard(
+                    onClick = {
+                        mostrarCambioContrasena = true
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(125.dp),
+                    colors = CardDefaults.elevatedCardColors(
+                        containerColor = Color(0xFF10294A)
+                    ),
+                    shape = RoundedCornerShape(20.dp)
+                ) {
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(20.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+
+                        Icon(
+                            imageVector = Icons.Default.LockReset,
+                            contentDescription = null,
+                            tint = celeste,
+                            modifier = Modifier.size(55.dp)
+                        )
+
+                        Spacer(modifier = Modifier.width(20.dp))
+
+                        Column {
+
+                            Text(
+                                text = "CAMBIAR CONTRASEÑA",
+                                color = Color.White,
+                                fontSize = 19.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Text(
+                                text = "Actualiza la contraseña de tu cuenta",
+                                color = Color.LightGray,
+                                fontSize = 13.sp
+                            )
+                        }
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(35.dp))
 
                 Button(
@@ -779,4 +1131,3 @@ fun PantallaPrincipal(
         }
     }
 }
-

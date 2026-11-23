@@ -5,13 +5,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.proyecto_alkaravision.local.ProductoDao
 import com.example.proyecto_alkaravision.local.ProductoEntity
+import com.example.proyecto_alkaravision.ui.components.CamaraSection
 import com.example.proyecto_alkaravision.ui.screens.Add.CampoProducto
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -38,15 +39,41 @@ fun EditarProductoScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    var codigo by remember(producto.id) { mutableStateOf(producto.codigo) }
-    var nombre by remember(producto.id) { mutableStateOf(producto.nombre) }
-    var categoria by remember(producto.id) { mutableStateOf(producto.categoria) }
-    var marca by remember(producto.id) { mutableStateOf(producto.marca) }
-    var precio by remember(producto.id) { mutableStateOf(producto.precio.toString()) }
-    var cantidad by remember(producto.id) { mutableStateOf(producto.cantidad.toString()) }
-    var descripcion by remember(producto.id) { mutableStateOf(producto.descripcion) }
+    var codigo by rememberSaveable (producto.id) {
+        mutableStateOf(producto.codigo)
+    }
 
-    var cargando by remember { mutableStateOf(false) }
+    var nombre by rememberSaveable (producto.id) {
+        mutableStateOf(producto.nombre)
+    }
+
+    var categoria by rememberSaveable (producto.id) {
+        mutableStateOf(producto.categoria)
+    }
+
+    var marca by rememberSaveable (producto.id) {
+        mutableStateOf(producto.marca)
+    }
+
+    var precio by rememberSaveable (producto.id) {
+        mutableStateOf(producto.precio.toString())
+    }
+
+    var cantidad by rememberSaveable (producto.id) {
+        mutableStateOf(producto.cantidad.toString())
+    }
+
+    var descripcion by rememberSaveable (producto.id) {
+        mutableStateOf(producto.descripcion)
+    }
+
+    var foto by rememberSaveable(producto.id) {
+        mutableStateOf<String?>(producto.foto)
+    }
+
+    var cargando by remember {
+        mutableStateOf(false)
+    }
 
     val azul = Color(0xFF087DEB)
     val celeste = Color(0xFF16C5FF)
@@ -68,22 +95,25 @@ fun EditarProductoScreen(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
 
-        Button(
-            onClick = onVolver,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = azul
-            ),
-            shape = RoundedCornerShape(12.dp),
-            modifier = Modifier.align(Alignment.Start)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = Icons.Default.ArrowBack,
-                contentDescription = "Volver"
+
+            IconButton(onClick = onVolver) {
+                Icon(
+                    imageVector = Icons.Default.ArrowBack,
+                    contentDescription = "Volver",
+                    tint = Color.White
+                )
+            }
+
+            Text(
+                text = "VOLVER",
+                color = Color.White,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold
             )
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            Text("VOLVER A PRODUCTOS")
         }
 
         Spacer(modifier = Modifier.height(20.dp))
@@ -149,13 +179,25 @@ fun EditarProductoScreen(
             multilinea = true
         )
 
+        Spacer(modifier = Modifier.height(15.dp))
+
+        CamaraSection(
+            fotoActual = foto,
+            onFotoCapturada = { nuevaFoto ->
+                foto = nuevaFoto
+            }
+        )
+
         Spacer(modifier = Modifier.height(20.dp))
 
         Button(
             onClick = {
 
-                val precioConvertido = precio.toDoubleOrNull()
-                val cantidadConvertida = cantidad.toIntOrNull()
+                val precioConvertido = precio.trim()
+                    .replace(',', '.')
+                    .toDoubleOrNull()
+
+                val cantidadConvertida = cantidad.trim().toIntOrNull()
 
                 if (
                     codigo.isBlank() ||
@@ -173,64 +215,95 @@ fun EditarProductoScreen(
                         Toast.LENGTH_SHORT
                     ).show()
 
+
                 } else if (
                     precioConvertido == null ||
-                    precioConvertido < 0 ||
+                    !precioConvertido.isFinite() ||
+                    precioConvertido <= 0.0
+                ) {
+
+                    Toast.makeText(
+                        context,
+                        "El precio debe ser un número mayor que cero",
+                        Toast.LENGTH_LONG
+                    ).show()
+
+                } else if (
                     cantidadConvertida == null ||
                     cantidadConvertida < 0
                 ) {
 
                     Toast.makeText(
                         context,
-                        "Verifica el precio y la cantidad",
-                        Toast.LENGTH_SHORT
+                        "La cantidad debe ser un número entero igual o mayor que cero",
+                        Toast.LENGTH_LONG
                     ).show()
 
                 } else {
 
                     cargando = true
 
-                    scope.launch {
 
+                    scope.launch {
                         try {
 
-                            withContext(Dispatchers.IO) {
+                            val codigoLimpio = codigo.trim()
 
-                                productoDao.actualizarProducto(
-                                    ProductoEntity(
-                                        id = producto.id,
-                                        codigo = codigo.trim(),
-                                        nombre = nombre.trim(),
-                                        categoria = categoria.trim(),
-                                        marca = marca.trim(),
-                                        precio = precioConvertido,
-                                        cantidad = cantidadConvertida,
-                                        descripcion = descripcion.trim()
-                                    )
-                                )
+                            val productoExistente = withContext(Dispatchers.IO) {
+                                productoDao.buscarProducto(codigoLimpio)
                             }
 
-                            Toast.makeText(
-                                context,
-                                "Producto actualizado correctamente",
-                                Toast.LENGTH_SHORT
-                            ).show()
+                            if (
+                                productoExistente != null &&
+                                productoExistente.id != producto.id
+                            ) {
 
-                            onVolver()
+                                Toast.makeText(
+                                    context,
+                                    "Ese código ya pertenece a otro producto",
+                                    Toast.LENGTH_LONG
+                                ).show()
+
+                            } else {
+
+                                withContext(Dispatchers.IO) {
+                                    productoDao.actualizarProducto(
+                                        ProductoEntity(
+                                            id = producto.id,
+                                            codigo = codigoLimpio,
+                                            nombre = nombre.trim(),
+                                            categoria = categoria.trim(),
+                                            marca = marca.trim(),
+                                            precio = precioConvertido,
+                                            cantidad = cantidadConvertida,
+                                            descripcion = descripcion.trim(),
+                                            foto = foto
+                                        )
+                                    )
+                                }
+
+                                Toast.makeText(
+                                    context,
+                                    "Producto actualizado correctamente",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+
+                                onVolver()
+                            }
 
                         } catch (e: Exception) {
 
                             Toast.makeText(
                                 context,
-                                "Error al actualizar: ${e.message}",
+                                "Error al actualizar el producto",
                                 Toast.LENGTH_LONG
                             ).show()
 
                         } finally {
-
                             cargando = false
                         }
                     }
+
                 }
             },
             modifier = Modifier

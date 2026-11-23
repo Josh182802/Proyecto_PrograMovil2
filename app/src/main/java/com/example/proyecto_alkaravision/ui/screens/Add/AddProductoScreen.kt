@@ -1,3 +1,4 @@
+
 package com.example.proyecto_alkaravision.ui.screens.Add
 
 import android.widget.Toast
@@ -19,10 +20,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.proyecto_alkaravision.local.ProductoDao
 import com.example.proyecto_alkaravision.local.ProductoEntity
+import com.example.proyecto_alkaravision.ui.components.CamaraSection
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -36,13 +39,14 @@ fun AddProductoScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    var codigo by remember { mutableStateOf("") }
-    var nombre by remember { mutableStateOf("") }
-    var categoria by remember { mutableStateOf("") }
-    var marca by remember { mutableStateOf("") }
-    var precio by remember { mutableStateOf("") }
-    var cantidad by remember { mutableStateOf("") }
-    var descripcion by remember { mutableStateOf("") }
+    var codigo by rememberSaveable { mutableStateOf("") }
+    var nombre by rememberSaveable { mutableStateOf("") }
+    var categoria by rememberSaveable { mutableStateOf("") }
+    var marca by rememberSaveable { mutableStateOf("") }
+    var precio by rememberSaveable { mutableStateOf("") }
+    var cantidad by rememberSaveable { mutableStateOf("") }
+    var descripcion by rememberSaveable { mutableStateOf("") }
+    var foto by rememberSaveable { mutableStateOf<String?>(null) }
 
     var cargando by remember { mutableStateOf(false) }
 
@@ -62,7 +66,6 @@ fun AddProductoScreen(
                 )
             )
     ) {
-
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -75,7 +78,6 @@ fun AddProductoScreen(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-
                 IconButton(onClick = onVolver) {
                     Icon(
                         imageVector = Icons.Default.ArrowBack,
@@ -104,7 +106,7 @@ fun AddProductoScreen(
             Spacer(modifier = Modifier.height(10.dp))
 
             Text(
-                text = "Nuevo producto",
+                text = "Nuevo Producto",
                 color = Color.White,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold
@@ -163,13 +165,27 @@ fun AddProductoScreen(
                 multilinea = true
             )
 
+            Spacer(modifier = Modifier.height(15.dp))
+
+            // COMPONENTE DE CÁMARA
+            CamaraSection(
+                fotoActual = foto,
+                onFotoCapturada = { nuevaFoto ->
+                    foto = nuevaFoto
+                }
+            )
+
             Spacer(modifier = Modifier.height(20.dp))
 
             Button(
                 onClick = {
 
-                    val precioConvertido = precio.toDoubleOrNull()
-                    val cantidadConvertida = cantidad.toIntOrNull()
+
+                    val precioConvertido = precio.trim()
+                        .replace(',', '.')
+                        .toDoubleOrNull()
+
+                    val cantidadConvertida = cantidad.trim().toIntOrNull()
 
                     if (
                         codigo.isBlank() ||
@@ -189,15 +205,25 @@ fun AddProductoScreen(
 
                     } else if (
                         precioConvertido == null ||
-                        precioConvertido < 0 ||
+                        !precioConvertido.isFinite() ||
+                        precioConvertido <= 0.0
+                    ) {
+
+                        Toast.makeText(
+                            context,
+                            "El precio debe ser un número mayor que cero",
+                            Toast.LENGTH_LONG
+                        ).show()
+
+                    } else if (
                         cantidadConvertida == null ||
                         cantidadConvertida < 0
                     ) {
 
                         Toast.makeText(
                             context,
-                            "Verifica el precio y la cantidad",
-                            Toast.LENGTH_SHORT
+                            "La cantidad debe ser un número entero igual o mayor que cero",
+                            Toast.LENGTH_LONG
                         ).show()
 
                     } else {
@@ -205,37 +231,62 @@ fun AddProductoScreen(
                         cargando = true
 
                         scope.launch {
-
                             try {
 
-                                withContext(Dispatchers.IO) {
+                                val registrado = withContext(Dispatchers.IO) {
 
-                                    productoDao.insertarProducto(
-                                        ProductoEntity(
-                                            codigo = codigo.trim(),
-                                            nombre = nombre.trim(),
-                                            categoria = categoria.trim(),
-                                            marca = marca.trim(),
-                                            precio = precioConvertido,
-                                            cantidad = cantidadConvertida,
-                                            descripcion = descripcion.trim()
+                                    val productoExistente =
+                                        productoDao.buscarProducto(codigo.trim())
+
+                                    if (productoExistente != null) {
+
+                                        false
+
+                                    } else {
+
+                                        productoDao.insertarProducto(
+                                            ProductoEntity(
+                                                codigo = codigo.trim(),
+                                                nombre = nombre.trim(),
+                                                categoria = categoria.trim(),
+                                                marca = marca.trim(),
+                                                precio = precioConvertido,
+                                                cantidad = cantidadConvertida,
+                                                descripcion = descripcion.trim(),
+                                                foto = foto
+                                            )
                                         )
-                                    )
+
+                                        true
+                                    }
                                 }
 
-                                Toast.makeText(
-                                    context,
-                                    "Producto registrado correctamente",
-                                    Toast.LENGTH_SHORT
-                                ).show()
+                                if (registrado) {
 
-                                codigo = ""
-                                nombre = ""
-                                categoria = ""
-                                marca = ""
-                                precio = ""
-                                cantidad = ""
-                                descripcion = ""
+                                    Toast.makeText(
+                                        context,
+                                        "Producto registrado correctamente",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+
+                                    codigo = ""
+                                    nombre = ""
+                                    categoria = ""
+                                    marca = ""
+                                    precio = ""
+                                    cantidad = ""
+                                    descripcion = ""
+                                    foto = null
+
+                                } else {
+
+                                    Toast.makeText(
+                                        context,
+                                        "Ya existe un producto registrado con ese código",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+
+                                }
 
                             } catch (e: Exception) {
 
@@ -246,7 +297,6 @@ fun AddProductoScreen(
                                 ).show()
 
                             } finally {
-
                                 cargando = false
                             }
                         }
